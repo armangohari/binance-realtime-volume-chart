@@ -31,15 +31,21 @@ const TIMEFRAMES = {
 };
 
 // Define interfaces for our chart references
-interface ChartComponents {
+interface TotalVolumeChart {
   chart: ReturnType<typeof createChart>;
-  buySeries: ISeriesApi<"Histogram">;
-  sellSeries: ISeriesApi<"Histogram">;
+  series: ISeriesApi<"Histogram">;
+}
+
+interface PressureChart {
+  chart: ReturnType<typeof createChart>;
+  series: ISeriesApi<"Histogram">;
 }
 
 export default function BinanceVolumeChart() {
-  const chartContainerRef = useRef<HTMLDivElement>(null);
-  const chartComponents = useRef<ChartComponents | null>(null);
+  const totalVolumeChartRef = useRef<HTMLDivElement>(null);
+  const pressureChartRef = useRef<HTMLDivElement>(null);
+  const totalVolumeChartComponents = useRef<TotalVolumeChart | null>(null);
+  const pressureChartComponents = useRef<PressureChart | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const [volumeData, setVolumeData] = useState<VolumeData[]>([]);
   const [connected, setConnected] = useState(false);
@@ -48,61 +54,181 @@ export default function BinanceVolumeChart() {
   const [lastUpdate, setLastUpdate] = useState<string>("Waiting for data...");
   const dataMapRef = useRef(new Map<number, VolumeData>());
 
-  // Initialize the chart
-  useEffect(() => {
-    if (chartContainerRef.current && !chartComponents.current) {
-      try {
-        console.log("Creating chart...");
+  // Create the chart theme
+  const getChartTheme = () => {
+    return {
+      background: "#0f1217",
+      text: "#c7c7c7",
+      grid: "#1a1d25",
+      border: "#2a2e39",
+    };
+  };
 
-        // Create chart
-        const chart = createChart(chartContainerRef.current, {
+  // Constants for styling
+  const bgColor = "bg-[#060a10]";
+  const cardBgColor = "bg-[#0f1217]";
+  const borderColor = "border-[#252830]";
+  const controlBgColor = "bg-[#161b24]";
+  const controlBorderColor = "border-[#252a36]";
+
+  // Initialize charts
+  useEffect(() => {
+    if (
+      totalVolumeChartRef.current &&
+      pressureChartRef.current &&
+      !totalVolumeChartComponents.current &&
+      !pressureChartComponents.current
+    ) {
+      try {
+        console.log("Creating charts...");
+        const chartTheme = getChartTheme();
+
+        // Create total volume chart
+        const totalVolumeChart = createChart(totalVolumeChartRef.current, {
           layout: {
-            background: { type: ColorType.Solid, color: "#121212" },
-            textColor: "#e0e0e0",
+            background: { type: ColorType.Solid, color: chartTheme.background },
+            textColor: chartTheme.text,
+            fontFamily:
+              "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
           },
           grid: {
-            vertLines: { color: "#303030" },
-            horzLines: { color: "#303030" },
+            vertLines: { color: chartTheme.grid },
+            horzLines: { color: chartTheme.grid },
           },
           timeScale: {
             timeVisible: true,
             secondsVisible: false,
-            borderColor: "#333333",
+            borderColor: chartTheme.border,
+            barSpacing: 8,
           },
-          width: chartContainerRef.current.clientWidth,
-          height: window.innerHeight - 150,
+          rightPriceScale: {
+            visible: true,
+            borderColor: chartTheme.border,
+            scaleMargins: {
+              top: 0.1,
+              bottom: 0.1,
+            },
+          },
+          leftPriceScale: {
+            visible: false,
+          },
+          width: totalVolumeChartRef.current.clientWidth,
+          height: (window.innerHeight - 280) / 2,
+          crosshair: {
+            vertLine: {
+              color: "rgba(255, 255, 255, 0.2)",
+              width: 1,
+              style: 1,
+              labelBackgroundColor: "#2962FF",
+            },
+            horzLine: {
+              color: "rgba(255, 255, 255, 0.2)",
+              width: 1,
+              style: 1,
+              labelBackgroundColor: "#2962FF",
+            },
+            mode: 1,
+          },
         });
 
-        console.log("Creating series...");
-
-        // Using the correct v5 API approach
-        const buySeries = chart.addSeries(HistogramSeries, {
-          color: "rgba(0, 191, 255, 0.6)",
+        // Total volume series - Light white
+        const totalVolumeSeries = totalVolumeChart.addSeries(HistogramSeries, {
+          color: "rgba(220, 220, 240, 0.65)",
           priceFormat: {
             type: "volume",
-          },
-          priceScaleId: "left",
-          base: 0,
-        });
-
-        const sellSeries = chart.addSeries(HistogramSeries, {
-          color: "rgba(255, 50, 50, 0.6)",
-          priceFormat: {
-            type: "volume",
+            precision: 0,
+            minMove: 0.01,
           },
           priceScaleId: "right",
           base: 0,
         });
 
-        // Store references
-        chartComponents.current = { chart, buySeries, sellSeries };
+        totalVolumeChartComponents.current = {
+          chart: totalVolumeChart,
+          series: totalVolumeSeries,
+        };
+
+        // Create pressure chart
+        const pressureChart = createChart(pressureChartRef.current, {
+          layout: {
+            background: { type: ColorType.Solid, color: chartTheme.background },
+            textColor: chartTheme.text,
+            fontFamily:
+              "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+          },
+          grid: {
+            vertLines: { color: chartTheme.grid },
+            horzLines: { color: chartTheme.grid },
+          },
+          timeScale: {
+            timeVisible: true,
+            secondsVisible: false,
+            borderColor: chartTheme.border,
+            barSpacing: 8,
+          },
+          rightPriceScale: {
+            visible: true,
+            borderColor: chartTheme.border,
+            scaleMargins: {
+              top: 0.1,
+              bottom: 0.1,
+            },
+          },
+          leftPriceScale: {
+            visible: false,
+          },
+          width: pressureChartRef.current.clientWidth,
+          height: (window.innerHeight - 280) / 2,
+          crosshair: {
+            vertLine: {
+              color: "rgba(255, 255, 255, 0.2)",
+              width: 1,
+              style: 1,
+              labelBackgroundColor: "#2962FF",
+            },
+            horzLine: {
+              color: "rgba(255, 255, 255, 0.2)",
+              width: 1,
+              style: 1,
+              labelBackgroundColor: "#2962FF",
+            },
+            mode: 1,
+          },
+        });
+
+        // Pressure series with dynamic colors
+        const pressureSeries = pressureChart.addSeries(HistogramSeries, {
+          color: "rgba(0, 0, 0, 0)", // Will be set dynamically
+          priceFormat: {
+            type: "volume",
+            precision: 0,
+            minMove: 0.01,
+          },
+          priceScaleId: "right",
+          base: 0,
+        });
+
+        pressureChartComponents.current = {
+          chart: pressureChart,
+          series: pressureSeries,
+        };
 
         // Handle resize
         const handleResize = () => {
-          if (chartComponents.current && chartContainerRef.current) {
-            chartComponents.current.chart.applyOptions({
-              width: chartContainerRef.current.clientWidth,
-              height: window.innerHeight - 150,
+          if (
+            totalVolumeChartComponents.current &&
+            totalVolumeChartRef.current
+          ) {
+            totalVolumeChartComponents.current.chart.applyOptions({
+              width: totalVolumeChartRef.current.clientWidth,
+              height: (window.innerHeight - 280) / 2,
+            });
+          }
+
+          if (pressureChartComponents.current && pressureChartRef.current) {
+            pressureChartComponents.current.chart.applyOptions({
+              width: pressureChartRef.current.clientWidth,
+              height: (window.innerHeight - 280) / 2,
             });
           }
         };
@@ -110,14 +236,15 @@ export default function BinanceVolumeChart() {
         window.addEventListener("resize", handleResize);
         return () => window.removeEventListener("resize", handleResize);
       } catch (error) {
-        console.error("Error initializing chart:", error);
+        console.error("Error initializing charts:", error);
       }
     }
   }, []);
 
   // Connect to Binance WebSocket and process orderbook data
   useEffect(() => {
-    if (!chartComponents.current) return;
+    if (!totalVolumeChartComponents.current || !pressureChartComponents.current)
+      return;
 
     // Close previous connection if it exists
     if (wsRef.current) {
@@ -209,115 +336,296 @@ export default function BinanceVolumeChart() {
     };
   }, [symbol, selectedTimeframe]);
 
-  // Update chart with new data
+  // Update charts with new data
   useEffect(() => {
-    if (!chartComponents.current || volumeData.length === 0) return;
+    if (
+      !totalVolumeChartComponents.current ||
+      !pressureChartComponents.current ||
+      volumeData.length === 0
+    )
+      return;
 
     try {
       console.log("Updating chart data...");
 
-      const { buySeries, sellSeries } = chartComponents.current;
-
-      // Format data for chart series
-      const buyData = volumeData.map((item) => ({
+      // Format data for total volume series (buy + sell)
+      const totalVolumeData = volumeData.map((item) => ({
         time: (item.time / 1000) as UTCTimestamp,
-        value: item.buyVolume,
+        value: item.buyVolume + item.sellVolume,
       }));
 
-      const sellData = volumeData.map((item) => ({
-        time: (item.time / 1000) as UTCTimestamp,
-        value: item.sellVolume,
-      }));
+      // Format data for pressure series with dynamic colors
+      const pressureData = volumeData.map((item) => {
+        const netPressure = Math.abs(item.buyVolume - item.sellVolume);
+        const isBuyDominant = item.buyVolume > item.sellVolume;
+
+        return {
+          time: (item.time / 1000) as UTCTimestamp,
+          value: netPressure,
+          color: isBuyDominant
+            ? "rgba(0, 191, 255, 0.8)"
+            : "rgba(255, 50, 50, 0.8)",
+        };
+      });
 
       // Update series data
-      buySeries.setData(buyData);
-      sellSeries.setData(sellData);
+      totalVolumeChartComponents.current.series.setData(totalVolumeData);
+      pressureChartComponents.current.series.setData(pressureData);
 
       // Fit content to view
-      chartComponents.current.chart.timeScale().fitContent();
+      totalVolumeChartComponents.current.chart.timeScale().fitContent();
+      pressureChartComponents.current.chart.timeScale().fitContent();
     } catch (error) {
       console.error("Error updating chart data:", error);
     }
   }, [volumeData]);
 
   return (
-    <div className="flex flex-col w-full">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-3">
-        <div className="flex items-center space-x-3">
-          <label htmlFor="symbol-select" className="text-sm font-medium">
-            Symbol:
-          </label>
-          <select
-            id="symbol-select"
-            value={symbol}
-            onChange={(e) => setSymbol(e.target.value.toLowerCase())}
-            className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm"
-          >
-            <option value="btcusdt">BTCUSDT</option>
-            <option value="ethusdt">ETHUSDT</option>
-            <option value="bnbusdt">BNBUSDT</option>
-            <option value="solusdt">SOLUSDT</option>
-            <option value="xrpusdt">XRPUSDT</option>
-            <option value="dogeusdt">DOGEUSDT</option>
-          </select>
-        </div>
-
-        <div className="flex items-center space-x-3">
-          <label htmlFor="timeframe-select" className="text-sm font-medium">
-            Timeframe:
-          </label>
-          <select
-            id="timeframe-select"
-            value={selectedTimeframe}
-            onChange={(e) => setSelectedTimeframe(e.target.value)}
-            className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm"
-          >
-            {Object.keys(TIMEFRAMES).map((tf) => (
-              <option key={tf} value={tf}>
-                {tf}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="text-sm">
-          <span
-            className={`inline-block w-3 h-3 rounded-full mr-1 ${
-              connected ? "bg-green-500" : "bg-red-500"
-            }`}
-          ></span>
-          {lastUpdate}
-        </div>
+    <div
+      className={`flex flex-col w-full ${bgColor} text-slate-100 min-h-screen p-5`}
+    >
+      {/* Header Section */}
+      <div className="mb-5">
+        <h1 className="text-xl font-bold mb-1.5">Binance Volume Analysis</h1>
+        <p className="text-slate-400 text-sm">
+          Real-time order book volume visualization
+        </p>
       </div>
 
-      <div className="text-sm mb-2">
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center">
-            <span className="inline-block w-3 h-3 bg-blue-400 rounded-full mr-1"></span>
-            <span>Buy Volume ({selectedTimeframe})</span>
-          </div>
-          <div className="flex items-center">
-            <span className="inline-block w-3 h-3 bg-red-500 rounded-full mr-1"></span>
-            <span>Sell Volume ({selectedTimeframe})</span>
-          </div>
-        </div>
-      </div>
-
+      {/* Controls Section */}
       <div
-        ref={chartContainerRef}
-        className="w-full h-[calc(100vh-150px)] bg-gray-900 rounded-md shadow-sm border border-gray-700"
-      />
+        className={`${cardBgColor} rounded-xl p-4 shadow-lg mb-5 ${borderColor} border`}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <div>
+              <label
+                htmlFor="symbol-select"
+                className="text-sm font-medium text-slate-300 block mb-1.5"
+              >
+                Trading Pair
+              </label>
+              <select
+                id="symbol-select"
+                value={symbol}
+                onChange={(e) => setSymbol(e.target.value.toLowerCase())}
+                className={`${controlBgColor} ${controlBorderColor} border text-white rounded-md px-3 py-2 w-32 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all`}
+              >
+                <option value="btcusdt">BTC/USDT</option>
+                <option value="ethusdt">ETH/USDT</option>
+                <option value="bnbusdt">BNB/USDT</option>
+                <option value="solusdt">SOL/USDT</option>
+                <option value="xrpusdt">XRP/USDT</option>
+                <option value="dogeusdt">DOGE/USDT</option>
+              </select>
+            </div>
 
-      {volumeData.length > 0 && (
-        <div className="mt-3 text-sm text-gray-600 dark:text-gray-300 flex flex-col md:flex-row md:justify-between">
-          <div>
-            Latest data (
-            {formatTimestamp(volumeData[volumeData.length - 1].time)})
+            <div>
+              <label
+                htmlFor="timeframe-select"
+                className="text-sm font-medium text-slate-300 block mb-1.5"
+              >
+                Timeframe
+              </label>
+              <select
+                id="timeframe-select"
+                value={selectedTimeframe}
+                onChange={(e) => setSelectedTimeframe(e.target.value)}
+                className={`${controlBgColor} ${controlBorderColor} border text-white rounded-md px-3 py-2 w-28 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all`}
+              >
+                {Object.keys(TIMEFRAMES).map((tf) => (
+                  <option key={tf} value={tf}>
+                    {tf}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-          <div>
-            Buy Volume:{" "}
-            {formatVolume(volumeData[volumeData.length - 1].buyVolume)} | Sell
-            Volume: {formatVolume(volumeData[volumeData.length - 1].sellVolume)}
+
+          {/* Status Badge */}
+          <div
+            className={`px-4 py-2.5 rounded-lg ${
+              connected
+                ? "bg-emerald-500/20 text-emerald-300"
+                : "bg-red-500/20 text-red-300"
+            } border ${
+              connected ? "border-emerald-600/30" : "border-red-600/30"
+            } flex items-center`}
+          >
+            <span
+              className={`inline-block w-2 h-2 rounded-full mr-2 ${
+                connected ? "bg-emerald-400" : "bg-red-400"
+              } animate-pulse`}
+            ></span>
+            <span className="text-sm font-medium">{lastUpdate}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 gap-5 mb-5">
+        {/* Total Volume Chart */}
+        <div
+          className={`${cardBgColor} rounded-xl p-4 shadow-lg ${borderColor} border`}
+        >
+          <div className="flex justify-between items-center mb-2.5">
+            <div className="flex items-center">
+              <span className="inline-block w-2.5 h-2.5 bg-[#dcdef0] opacity-60 rounded-full mr-2"></span>
+              <span className="font-medium text-slate-200">
+                Total Volume ({selectedTimeframe})
+              </span>
+            </div>
+            {volumeData.length > 0 && (
+              <div className="text-sm font-semibold text-blue-400">
+                {formatVolume(
+                  volumeData[volumeData.length - 1].buyVolume +
+                    volumeData[volumeData.length - 1].sellVolume
+                )}
+              </div>
+            )}
+          </div>
+          <div
+            ref={totalVolumeChartRef}
+            className="w-full h-[calc((100vh-260px)/2)] rounded-md overflow-hidden"
+          />
+        </div>
+
+        {/* Pressure Chart */}
+        <div
+          className={`${cardBgColor} rounded-xl p-4 shadow-lg ${borderColor} border`}
+        >
+          <div className="flex justify-between items-center mb-2.5">
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center">
+                <span className="inline-block w-2.5 h-2.5 bg-[#0190FF] rounded-full mr-2"></span>
+                <span className="font-medium text-slate-200">Buy Dominant</span>
+              </div>
+              <div className="flex items-center">
+                <span className="inline-block w-2.5 h-2.5 bg-[#FF3B69] rounded-full mr-2"></span>
+                <span className="font-medium text-slate-200">
+                  Sell Dominant
+                </span>
+              </div>
+            </div>
+            {volumeData.length > 0 && (
+              <div className="text-sm font-semibold">
+                <span
+                  className={
+                    volumeData[volumeData.length - 1].buyVolume >
+                    volumeData[volumeData.length - 1].sellVolume
+                      ? "text-[#0190FF]"
+                      : "text-[#FF3B69]"
+                  }
+                >
+                  {formatVolume(
+                    Math.abs(
+                      volumeData[volumeData.length - 1].buyVolume -
+                        volumeData[volumeData.length - 1].sellVolume
+                    )
+                  )}
+                </span>
+              </div>
+            )}
+          </div>
+          <div
+            ref={pressureChartRef}
+            className="w-full h-[calc((100vh-260px)/2)] rounded-md overflow-hidden"
+          />
+        </div>
+      </div>
+
+      {/* Footer Stats */}
+      {volumeData.length > 0 && (
+        <div
+          className={`${cardBgColor} rounded-lg p-3.5 ${borderColor} border text-sm text-slate-300`}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="flex items-center">
+              <svg
+                className="w-4 h-4 mr-2.5 text-slate-400"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 20V10"></path>
+                <path d="M18 20V4"></path>
+                <path d="M6 20v-6"></path>
+              </svg>
+              <div>
+                <div className="text-xs text-slate-400">Buy Volume</div>
+                <div className="font-medium text-[#0190FF]">
+                  {formatVolume(volumeData[volumeData.length - 1].buyVolume)}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center">
+              <svg
+                className="w-4 h-4 mr-2.5 text-slate-400"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 4v10"></path>
+                <path d="M18 4v16"></path>
+                <path d="M6 4v6"></path>
+              </svg>
+              <div>
+                <div className="text-xs text-slate-400">Sell Volume</div>
+                <div className="font-medium text-[#FF3B69]">
+                  {formatVolume(volumeData[volumeData.length - 1].sellVolume)}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center">
+              <svg
+                className="w-4 h-4 mr-2.5 text-slate-400"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path>
+              </svg>
+              <div>
+                <div className="text-xs text-slate-400">Net Pressure</div>
+                <div
+                  className={`font-medium ${
+                    volumeData[volumeData.length - 1].buyVolume >
+                    volumeData[volumeData.length - 1].sellVolume
+                      ? "text-[#0190FF]"
+                      : "text-[#FF3B69]"
+                  }`}
+                >
+                  {formatVolume(
+                    Math.abs(
+                      volumeData[volumeData.length - 1].buyVolume -
+                        volumeData[volumeData.length - 1].sellVolume
+                    )
+                  )}
+                  <span className="text-xs ml-1">
+                    (
+                    {volumeData[volumeData.length - 1].buyVolume >
+                    volumeData[volumeData.length - 1].sellVolume
+                      ? "Buy"
+                      : "Sell"}
+                    )
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
