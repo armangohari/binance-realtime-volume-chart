@@ -32,6 +32,73 @@ export function getDepthStreamUrl(symbol: string): string {
   return `wss://stream.binance.com:9443/ws/${symbol.toLowerCase()}@depth@${DEPTH_UPDATE_SPEED}ms`;
 }
 
+// Create a function to safely connect to WebSocket with fallback
+export function createBinanceWebSocket(
+  symbol: string,
+  onOpen: (event: Event) => void,
+  onClose: (event: CloseEvent) => void,
+  onError: (event: Event) => void,
+  onMessage: (event: MessageEvent) => void
+): WebSocket {
+  // Define an array of URLs to try in order
+  const urls = [
+    // Try testnet first if in development
+    `wss://testnet.binance.vision/ws/${symbol.toLowerCase()}@depth@${DEPTH_UPDATE_SPEED}ms`,
+    // Then try without port
+    `wss://stream.binance.com/ws/${symbol.toLowerCase()}@depth@${DEPTH_UPDATE_SPEED}ms`,
+    // Then try with port (original)
+    getDepthStreamUrl(symbol),
+    // Finally try with fstream
+    `wss://fstream.binance.com/ws/${symbol.toLowerCase()}@depth@${DEPTH_UPDATE_SPEED}ms`,
+  ];
+
+  // Log all URLs we're going to try
+  console.log("Attempting to connect to WebSocket with following URLs:", urls);
+
+  // Try the first URL
+  const ws = new WebSocket(urls[0]);
+  let currentUrlIndex = 0;
+
+  // Setup handlers with improved logging
+  ws.onopen = (event) => {
+    console.log(`Successfully connected to ${urls[currentUrlIndex]}`);
+    onOpen(event);
+  };
+
+  ws.onclose = (event) => {
+    console.log(`WebSocket connection closed: ${event.code}`, event);
+
+    // Try the next URL if this wasn't a normal closure and we have more URLs to try
+    if (event.code !== 1000 && currentUrlIndex < urls.length - 1) {
+      currentUrlIndex++;
+      console.log(`Trying next URL: ${urls[currentUrlIndex]}`);
+      const nextWs = new WebSocket(urls[currentUrlIndex]);
+
+      // Transfer all event handlers
+      nextWs.onopen = ws.onopen;
+      nextWs.onclose = ws.onclose;
+      nextWs.onerror = ws.onerror;
+      nextWs.onmessage = ws.onmessage;
+
+      // Return the new connection
+      return nextWs;
+    }
+
+    onClose(event);
+  };
+
+  ws.onerror = (event) => {
+    console.warn(`WebSocket error with ${urls[currentUrlIndex]}:`, event);
+    onError(event);
+
+    // The onclose handler will be called automatically after an error
+  };
+
+  ws.onmessage = onMessage;
+
+  return ws;
+}
+
 // Process raw depth data from WebSocket
 export function processDepthData(data: BinanceDepthUpdate): {
   buyVolume: number;
