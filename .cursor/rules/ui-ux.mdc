@@ -1,0 +1,10 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+You are an expert in UI design with Next.js, React, and Tailwind CSS. 
+- Ensure all components are responsive and accessible.
+- Use a minimalist design aesthetic.
+- Follow Next.js best practices for file organization.
+- Structure files with clear separation between components, helpers, and styles.

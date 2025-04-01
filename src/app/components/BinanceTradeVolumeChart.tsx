@@ -9,13 +9,13 @@ import {
   ISeriesApi,
 } from "lightweight-charts";
 import {
-  VolumeData,
+  TradeVolumeData,
   formatTimestamp,
   formatVolume,
-  createBinanceWebSocket,
-  processDepthData,
-  BinanceDepthUpdate,
-} from "../utils/binanceUtils";
+  createBinanceTradeWebSocket,
+  processTradeData,
+  BinanceTrade,
+} from "../utils/tradeUtils";
 
 // Timeframe options in seconds
 const TIMEFRAMES = {
@@ -41,19 +41,19 @@ interface PressureChart {
   series: ISeriesApi<"Histogram">;
 }
 
-export default function BinanceVolumeChart() {
+export default function BinanceTradeVolumeChart() {
   const totalVolumeChartRef = useRef<HTMLDivElement>(null);
   const pressureChartRef = useRef<HTMLDivElement>(null);
   const totalVolumeChartComponents = useRef<TotalVolumeChart | null>(null);
   const pressureChartComponents = useRef<PressureChart | null>(null);
-  const [volumeData, setVolumeData] = useState<VolumeData[]>([]);
+  const [volumeData, setVolumeData] = useState<TradeVolumeData[]>([]);
   const [symbol, setSymbol] = useState<string>("btcusdt");
-  const [selectedTimeframe, setSelectedTimeframe] = useState<string>("1s");
+  const [selectedTimeframe, setSelectedTimeframe] = useState<string>("1m");
   const [lastUpdate, setLastUpdate] = useState<string>("Loading data...");
   const [loading, setLoading] = useState<boolean>(true);
   const [connected, setConnected] = useState<boolean>(false);
-  const currentTimeframeRef = useRef<string>("1s");
-  const dataMapRef = useRef(new Map<number, VolumeData>());
+  const currentTimeframeRef = useRef<string>("1m");
+  const dataMapRef = useRef(new Map<number, TradeVolumeData>());
   const wsRef = useRef<WebSocket | null>(null);
   const [reconnectCount, setReconnectCount] = useState<number>(0);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -136,7 +136,6 @@ export default function BinanceVolumeChart() {
         });
 
         // Total volume series - Light white
-        // For v5.0.3, use addSeries with HistogramSeries
         const totalVolumeSeries = totalVolumeChart.addSeries(HistogramSeries, {
           color: "rgba(220, 220, 240, 0.65)",
           priceFormat: {
@@ -268,11 +267,11 @@ export default function BinanceVolumeChart() {
       );
 
       // Reset data map on reconnection
-      dataMapRef.current = new Map<number, VolumeData>();
+      dataMapRef.current = new Map<number, TradeVolumeData>();
 
       try {
         // Create a new WebSocket connection using our safer method
-        const newWs = createBinanceWebSocket(
+        const newWs = createBinanceTradeWebSocket(
           symbol,
           // onOpen
           () => {
@@ -307,134 +306,8 @@ export default function BinanceVolumeChart() {
           // onMessage
           (event) => {
             try {
-              const data = JSON.parse(event.data) as BinanceDepthUpdate;
+              const data = JSON.parse(event.data) as BinanceTrade;
 
-              // Process orderbook data
-              if (data.b && data.a) {
-                // Bids and asks
-                // Get current timestamp and round it to the current timeframe
-                const now = Date.now();
-                // Use the ref to access the current timeframe value
-                const currentTimeFrameMs =
-                  TIMEFRAMES[
-                    currentTimeframeRef.current as keyof typeof TIMEFRAMES
-                  ] * 1000;
-                const timeframeTimestamp =
-                  Math.floor(now / currentTimeFrameMs) * currentTimeFrameMs;
-
-                // Process the depth data
-                const { buyVolume, sellVolume } = processDepthData(data);
-
-                // Update the data map
-                const dataMap = dataMapRef.current;
-
-                // If we have data for this timeframe already, update it
-                if (dataMap.has(timeframeTimestamp)) {
-                  const existing = dataMap.get(timeframeTimestamp)!;
-                  dataMap.set(timeframeTimestamp, {
-                    time: timeframeTimestamp,
-                    buyVolume: existing.buyVolume + buyVolume,
-                    sellVolume: existing.sellVolume + sellVolume,
-                  });
-                } else {
-                  // Otherwise create a new entry
-                  dataMap.set(timeframeTimestamp, {
-                    time: timeframeTimestamp,
-                    buyVolume,
-                    sellVolume,
-                  });
-                }
-
-                // Update state with the latest data
-                const newData = Array.from(dataMap.values())
-                  .sort((a, b) => a.time - b.time)
-                  .slice(-100); // Keep last 100 bars for performance
-
-                console.log(
-                  `WebSocket data processed: ${newData.length} bars, buy: ${buyVolume}, sell: ${sellVolume}`,
-                );
-                setVolumeData(newData);
-                setLastUpdate(
-                  `Last update: ${formatTimestamp(now)} (${
-                    currentTimeframeRef.current
-                  })`,
-                );
-              }
-            } catch (error) {
-              console.error("Error processing WebSocket message:", error);
-            }
-          },
-        );
-        wsRef.current = newWs;
-      } catch (error) {
-        console.error("Error creating WebSocket:", error);
-        // Try again after the backoff period
-        reconnectWithCurrentTimeframe();
-      }
-    }, backoffTime);
-  };
-
-  // Connect to Binance WebSocket on component mount or when symbol/timeframe changes
-  useEffect(() => {
-    if (!totalVolumeChartComponents.current || !pressureChartComponents.current)
-      return;
-
-    // Close existing WS connection
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
-    }
-
-    // Reset data map for new connection
-    dataMapRef.current = new Map<number, VolumeData>();
-
-    // Clear existing volume data when timeframe changes
-    setVolumeData([]);
-
-    console.log(
-      `Timeframe changed to ${selectedTimeframe}, reset data and reconnecting...`,
-    );
-
-    try {
-      // Create WebSocket connection using the safer method
-      const ws = createBinanceWebSocket(
-        symbol,
-        // onOpen
-        () => {
-          console.log("Connected to Binance WebSocket");
-          setConnected(true);
-          setLastUpdate("Connected to Binance WebSocket");
-          setReconnectCount(0); // Reset reconnect count on successful connection
-        },
-        // onClose
-        (event) => {
-          console.log("Disconnected from Binance WebSocket", event);
-          setConnected(false);
-          setLastUpdate(
-            `Disconnected from Binance WebSocket: ${
-              event.reason || "Unknown reason"
-            }`,
-          );
-
-          // Only attempt to reconnect if this wasn't a normal closure
-          if (event.code !== 1000) {
-            reconnectWithCurrentTimeframe();
-          }
-        },
-        // onError
-        (error) => {
-          console.error("WebSocket error:", error);
-          setLastUpdate(`WebSocket error: ${new Date().toLocaleTimeString()}`);
-          // Error will trigger the onclose handler which will handle reconnection
-        },
-        // onMessage
-        (event) => {
-          try {
-            const data = JSON.parse(event.data) as BinanceDepthUpdate;
-
-            // Process orderbook data
-            if (data.b && data.a) {
-              // Bids and asks
               // Get current timestamp and round it to the current timeframe
               const now = Date.now();
               // Use the ref to access the current timeframe value
@@ -445,8 +318,8 @@ export default function BinanceVolumeChart() {
               const timeframeTimestamp =
                 Math.floor(now / currentTimeFrameMs) * currentTimeFrameMs;
 
-              // Process the depth data
-              const { buyVolume, sellVolume } = processDepthData(data);
+              // Process the trade data
+              const { buyVolume, sellVolume } = processTradeData(data);
 
               // Update the data map
               const dataMap = dataMapRef.current;
@@ -482,11 +355,129 @@ export default function BinanceVolumeChart() {
                   currentTimeframeRef.current
                 })`,
               );
+            } catch (error) {
+              console.error("Error processing WebSocket message:", error);
+            }
+          },
+        );
+        wsRef.current = newWs;
+      } catch (error) {
+        console.error("Error creating WebSocket:", error);
+        // Try again after the backoff period
+        reconnectWithCurrentTimeframe();
+      }
+    }, backoffTime);
+  };
 
-              // Set loading to false once we have data
-              if (loading && newData.length > 0) {
-                setLoading(false);
-              }
+  // Connect to Binance WebSocket on component mount or when symbol/timeframe changes
+  useEffect(() => {
+    if (!totalVolumeChartComponents.current || !pressureChartComponents.current)
+      return;
+
+    // Close existing WS connection
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+
+    // Reset data map for new connection
+    dataMapRef.current = new Map<number, TradeVolumeData>();
+
+    // Clear existing volume data when timeframe changes
+    setVolumeData([]);
+
+    console.log(
+      `Timeframe changed to ${selectedTimeframe}, reset data and reconnecting...`,
+    );
+
+    try {
+      // Create WebSocket connection using the safer method
+      const ws = createBinanceTradeWebSocket(
+        symbol,
+        // onOpen
+        () => {
+          console.log("Connected to Binance WebSocket");
+          setConnected(true);
+          setLastUpdate("Connected to Binance WebSocket");
+          setReconnectCount(0); // Reset reconnect count on successful connection
+        },
+        // onClose
+        (event) => {
+          console.log("Disconnected from Binance WebSocket", event);
+          setConnected(false);
+          setLastUpdate(
+            `Disconnected from Binance WebSocket: ${
+              event.reason || "Unknown reason"
+            }`,
+          );
+
+          // Only attempt to reconnect if this wasn't a normal closure
+          if (event.code !== 1000) {
+            reconnectWithCurrentTimeframe();
+          }
+        },
+        // onError
+        (error) => {
+          console.error("WebSocket error:", error);
+          setLastUpdate(`WebSocket error: ${new Date().toLocaleTimeString()}`);
+          // Error will trigger the onclose handler which will handle reconnection
+        },
+        // onMessage
+        (event) => {
+          try {
+            const data = JSON.parse(event.data) as BinanceTrade;
+
+            // Get current timestamp and round it to the current timeframe
+            const now = Date.now();
+            // Use the ref to access the current timeframe value
+            const currentTimeFrameMs =
+              TIMEFRAMES[
+                currentTimeframeRef.current as keyof typeof TIMEFRAMES
+              ] * 1000;
+            const timeframeTimestamp =
+              Math.floor(now / currentTimeFrameMs) * currentTimeFrameMs;
+
+            // Process the trade data
+            const { buyVolume, sellVolume } = processTradeData(data);
+
+            // Update the data map
+            const dataMap = dataMapRef.current;
+
+            // If we have data for this timeframe already, update it
+            if (dataMap.has(timeframeTimestamp)) {
+              const existing = dataMap.get(timeframeTimestamp)!;
+              dataMap.set(timeframeTimestamp, {
+                time: timeframeTimestamp,
+                buyVolume: existing.buyVolume + buyVolume,
+                sellVolume: existing.sellVolume + sellVolume,
+              });
+            } else {
+              // Otherwise create a new entry
+              dataMap.set(timeframeTimestamp, {
+                time: timeframeTimestamp,
+                buyVolume,
+                sellVolume,
+              });
+            }
+
+            // Update state with the latest data
+            const newData = Array.from(dataMap.values())
+              .sort((a, b) => a.time - b.time)
+              .slice(-100); // Keep last 100 bars for performance
+
+            console.log(
+              `WebSocket data processed: ${newData.length} bars, buy: ${buyVolume}, sell: ${sellVolume}`,
+            );
+            setVolumeData(newData);
+            setLastUpdate(
+              `Last update: ${formatTimestamp(now)} (${
+                currentTimeframeRef.current
+              })`,
+            );
+
+            // Set loading to false once we have data
+            if (loading && newData.length > 0) {
+              setLoading(false);
             }
           } catch (error) {
             console.error("Error processing WebSocket message:", error);
@@ -587,9 +578,11 @@ export default function BinanceVolumeChart() {
     >
       {/* Header Section */}
       <div className="mb-5">
-        <h1 className="mb-1.5 text-xl font-bold">Binance Volume Analysis</h1>
+        <h1 className="mb-1.5 text-xl font-bold">
+          Binance Trade Volume Analysis
+        </h1>
         <p className="text-sm text-slate-400">
-          Real-time order book volume visualization
+          Real-time trade volume visualization (actual executed trades)
         </p>
       </div>
 
@@ -675,7 +668,7 @@ export default function BinanceVolumeChart() {
             <div className="flex items-center">
               <span className="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-[#dcdef0] opacity-60"></span>
               <span className="font-medium text-slate-200">
-                Total Volume ({selectedTimeframe})
+                Total Trade Volume ({selectedTimeframe})
               </span>
             </div>
             {volumeData.length > 0 && (
