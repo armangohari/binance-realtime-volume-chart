@@ -45,4 +45,3 @@ next-env.d.ts
 
 # database files
 /data/*.db
-/src/data/*.db

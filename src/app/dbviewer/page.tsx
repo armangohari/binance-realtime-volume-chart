@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import axios from "axios";
-import Link from "next/link";
-import { LayoutWrapper } from "../../components/layout-wrapper";
+import { useEffect, useState } from "react";
 import { MdDownload, MdStorage, MdTableView } from "react-icons/md";
+import { LayoutWrapper } from "@/components/ui/layout-wrapper";
 
 interface OrderbookEntry {
   id: number;
@@ -108,9 +107,9 @@ export default function DBViewer() {
     csvContent += headers.join(",") + "\n";
 
     // Add data rows
-    activeData.forEach((item: any) => {
+    activeData.forEach((item: ConnectionLog | OrderbookEntry) => {
       const row = headers.map((header) => {
-        const value = item[header];
+        const value = item[header as keyof typeof item];
         // Handle string values that might contain commas
         if (typeof value === "string" && value.includes(",")) {
           return `"${value}"`;

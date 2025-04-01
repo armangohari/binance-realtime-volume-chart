@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import axios from "axios";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 // Available timeframes in seconds (must match options in serverCollector.ts)
 const TIMEFRAMES = {
@@ -111,17 +111,17 @@ export default function DataCollectorControls() {
   const formatConnectionStatus = (status: string) => {
     switch (status) {
       case "connected":
-        return <span className="text-green-500 font-medium">Connected</span>;
+        return <span className="font-medium text-green-500">Connected</span>;
       case "connecting":
         return (
-          <span className="text-yellow-500 font-medium">Connecting...</span>
+          <span className="font-medium text-yellow-500">Connecting...</span>
         );
       case "disconnected":
-        return <span className="text-red-500 font-medium">Disconnected</span>;
+        return <span className="font-medium text-red-500">Disconnected</span>;
       case "error":
-        return <span className="text-red-500 font-medium">Error</span>;
+        return <span className="font-medium text-red-500">Error</span>;
       default:
-        return <span className="text-gray-500 font-medium">Unknown</span>;
+        return <span className="font-medium text-gray-500">Unknown</span>;
     }
   };
 
@@ -134,18 +134,18 @@ export default function DataCollectorControls() {
   };
 
   return (
-    <div className={`w-full ${cardBgColor} rounded-lg shadow-md p-4 mb-6`}>
-      <h2 className="text-xl font-bold mb-4">Data Collector Controls</h2>
+    <div className={`w-full ${cardBgColor} mb-6 rounded-lg p-4 shadow-md`}>
+      <h2 className="mb-4 text-xl font-bold">Data Collector Controls</h2>
 
       {/* Controls */}
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
+      <div className="mb-6 flex flex-col gap-4 md:flex-row">
         <div className="flex-1">
-          <label className="block mb-2 text-sm font-medium">Timeframe</label>
+          <label className="mb-2 block text-sm font-medium">Timeframe</label>
           <select
             value={selectedTimeframe}
             onChange={(e) => setSelectedTimeframe(e.target.value)}
             disabled={isRunning || loading}
-            className={`w-full p-2 rounded ${controlBgColor} ${controlBorderColor} border`}
+            className={`w-full rounded p-2 ${controlBgColor} ${controlBorderColor} border`}
           >
             {Object.keys(TIMEFRAMES).map((tf) => (
               <option key={tf} value={tf}>
@@ -155,11 +155,11 @@ export default function DataCollectorControls() {
           </select>
         </div>
 
-        <div className="flex-1 flex items-end">
+        <div className="flex flex-1 items-end">
           <button
             onClick={toggleCollection}
             disabled={loading}
-            className={`w-full p-2 rounded font-medium transition-colors ${
+            className={`w-full rounded p-2 font-medium transition-colors ${
               isRunning
                 ? "bg-red-600 hover:bg-red-700"
                 : "bg-green-600 hover:bg-green-700"
@@ -168,15 +168,15 @@ export default function DataCollectorControls() {
             {loading
               ? "Working..."
               : isRunning
-              ? "Stop Collection"
-              : "Start Collection"}
+                ? "Stop Collection"
+                : "Start Collection"}
           </button>
         </div>
 
-        <div className="flex-1 flex items-end">
+        <div className="flex flex-1 items-end">
           <Link
             href="/dbviewer"
-            className={`w-full p-2 rounded font-medium transition-colors bg-gray-700 hover:bg-gray-600 text-center`}
+            className={`w-full rounded bg-gray-700 p-2 text-center font-medium transition-colors hover:bg-gray-600`}
           >
             View Database
           </Link>
@@ -185,22 +185,22 @@ export default function DataCollectorControls() {
 
       {/* Status display */}
       {error && (
-        <div className="p-3 mb-4 bg-red-900/50 border border-red-800 rounded">
+        <div className="mb-4 rounded border border-red-800 bg-red-900/50 p-3">
           {error}
         </div>
       )}
 
       {status && (
         <div>
-          <h3 className="text-lg font-medium mb-2">Status</h3>
+          <h3 className="mb-2 text-lg font-medium">Status</h3>
 
           {/* Database stats */}
           {status.stats && (
             <div
               className={`mb-4 p-3 ${controlBgColor} rounded border ${borderColor}`}
             >
-              <h4 className="font-medium mb-2">Database</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <h4 className="mb-2 font-medium">Database</h4>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <p className="text-sm">
                     <span className="text-gray-400">Total entries:</span>{" "}
@@ -210,14 +210,14 @@ export default function DataCollectorControls() {
                     <span className="text-gray-400">Time range:</span>{" "}
                     {status.stats.oldestEntry > 0
                       ? `${formatTimestamp(
-                          status.stats.oldestEntry
+                          status.stats.oldestEntry,
                         )} - ${formatTimestamp(status.stats.newestEntry)}`
                       : "No data"}
                   </p>
                 </div>
 
                 <div>
-                  <p className="text-sm font-medium mb-1">Entries by symbol:</p>
+                  <p className="mb-1 text-sm font-medium">Entries by symbol:</p>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                     {Object.entries(status.stats.entriesBySymbol || {}).map(
                       ([symbol, count]) => (
@@ -225,7 +225,7 @@ export default function DataCollectorControls() {
                           <span className="text-gray-400">{symbol}:</span>{" "}
                           {Number(count).toLocaleString()}
                         </p>
-                      )
+                      ),
                     )}
                   </div>
                 </div>
@@ -238,16 +238,16 @@ export default function DataCollectorControls() {
             <div
               className={`p-3 ${controlBgColor} rounded border ${borderColor}`}
             >
-              <h4 className="font-medium mb-2">Connections</h4>
+              <h4 className="mb-2 font-medium">Connections</h4>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-gray-700">
-                      <th className="text-left p-2">Symbol</th>
-                      <th className="text-left p-2">Status</th>
-                      <th className="text-left p-2">Reconnect Count</th>
-                      <th className="text-left p-2">Last Connected</th>
-                      <th className="text-left p-2">Last Error</th>
+                      <th className="p-2 text-left">Symbol</th>
+                      <th className="p-2 text-left">Status</th>
+                      <th className="p-2 text-left">Reconnect Count</th>
+                      <th className="p-2 text-left">Last Connected</th>
+                      <th className="p-2 text-left">Last Error</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -266,7 +266,7 @@ export default function DataCollectorControls() {
                             {conn.lastError || "None"}
                           </td>
                         </tr>
-                      )
+                      ),
                     )}
                   </tbody>
                 </table>

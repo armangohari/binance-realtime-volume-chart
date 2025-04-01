@@ -1,16 +1,16 @@
+import { LayoutWrapper } from "@/components/ui/layout-wrapper";
 import Link from "next/link";
-import { LayoutWrapper } from "../components/layout-wrapper";
 import {
-  MdShowChart,
-  MdDownload,
-  MdStorage,
   MdArrowForward,
-  MdBolt,
   MdBarChart,
-  MdTimer,
+  MdBolt,
   MdDataUsage,
-  MdQueryStats,
+  MdDownload,
   MdFileDownload,
+  MdQueryStats,
+  MdShowChart,
+  MdStorage,
+  MdTimer,
   MdTrackChanges,
 } from "react-icons/md";
 

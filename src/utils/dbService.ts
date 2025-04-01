@@ -5,7 +5,7 @@ import path from "path";
 import fs from "fs";
 
 // Define the database directory and ensure it exists
-const DB_DIR = path.join(process.cwd(), "src/data");
+const DB_DIR = path.join(process.cwd(), "data");
 if (!fs.existsSync(DB_DIR)) {
   fs.mkdirSync(DB_DIR, { recursive: true });
 }

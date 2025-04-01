@@ -1,21 +1,21 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import {
-  createChart,
   ColorType,
-  UTCTimestamp,
   HistogramSeries,
   ISeriesApi,
+  UTCTimestamp,
+  createChart,
 } from "lightweight-charts";
+import { useEffect, useRef, useState } from "react";
 import {
+  BinanceTrade,
   TradeVolumeData,
+  createBinanceTradeWebSocket,
   formatTimestamp,
   formatVolume,
-  createBinanceTradeWebSocket,
   processTradeData,
-  BinanceTrade,
-} from "../utils/tradeUtils";
+} from "@/utils/tradeUtils";
 
 // Timeframe options in seconds
 const TIMEFRAMES = {

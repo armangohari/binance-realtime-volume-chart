@@ -1,7 +1,7 @@
 "use client";
 
-import { Navbar } from "./navbar";
-import { Footer } from "./footer";
+import { Footer } from "@/components/layouts/footer";
+import { Navbar } from "@/components/layouts/navbar";
 
 interface LayoutWrapperProps {
   children: React.ReactNode;

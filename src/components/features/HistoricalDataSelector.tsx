@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import axios from "axios";
+import { useState } from "react";
 import { OrderbookApiResponse } from "./ChartContainer";
 
 interface HistoricalDataSelectorProps {

@@ -1,18 +1,18 @@
 "use client";
 
+import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { cn } from "@/lib/utils";
-import { ThemeToggle } from "./theme-toggle";
 import {
-  MdShowChart,
-  MdDownload,
-  MdStorage,
   MdBarChart,
-  MdMenu,
   MdClose,
+  MdDownload,
   MdHome,
+  MdMenu,
+  MdShowChart,
+  MdStorage,
 } from "react-icons/md";
 
 const mainNav = [

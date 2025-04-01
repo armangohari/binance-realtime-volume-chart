@@ -1,21 +1,21 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import {
-  createChart,
-  ColorType,
-  UTCTimestamp,
-  HistogramSeries,
-  ISeriesApi,
-} from "lightweight-charts";
-import {
+  BinanceDepthUpdate,
   VolumeData,
+  createBinanceWebSocket,
   formatTimestamp,
   formatVolume,
-  createBinanceWebSocket,
   processDepthData,
-  BinanceDepthUpdate,
-} from "../utils/binanceUtils";
+} from "@/utils/binanceUtils";
+import {
+  ColorType,
+  HistogramSeries,
+  ISeriesApi,
+  UTCTimestamp,
+  createChart,
+} from "lightweight-charts";
+import { useEffect, useRef, useState } from "react";
 
 // Timeframe options in seconds
 const TIMEFRAMES = {

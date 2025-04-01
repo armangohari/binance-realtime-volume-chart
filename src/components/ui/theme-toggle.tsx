@@ -1,8 +1,7 @@
 "use client";
 
-import * as React from "react";
 import { useTheme } from "next-themes";
-import { MdOutlineLightMode, MdOutlineDarkMode } from "react-icons/md";
+import { MdOutlineDarkMode, MdOutlineLightMode } from "react-icons/md";
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
