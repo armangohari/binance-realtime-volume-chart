@@ -5,7 +5,7 @@ import path from "path";
 import fs from "fs";
 
 // Define the database directory and ensure it exists
-const DB_DIR = path.join(process.cwd(), "data");
+const DB_DIR = path.join(process.cwd(), "src/data");
 if (!fs.existsSync(DB_DIR)) {
   fs.mkdirSync(DB_DIR, { recursive: true });
 }
@@ -81,7 +81,7 @@ export async function initDatabase(): Promise<Database.Database> {
 
 // Save orderbook data to database
 export async function saveOrderbookData(
-  entry: OrderbookEntry
+  entry: OrderbookEntry,
 ): Promise<number> {
   try {
     const database = await initDatabase();
@@ -98,7 +98,7 @@ export async function saveOrderbookData(
       entry.timeframe,
       entry.buy_volume,
       entry.sell_volume,
-      entry.event_time || null
+      entry.event_time || null,
     );
 
     return result.lastInsertRowid as number;
@@ -123,7 +123,7 @@ export async function logConnection(log: ConnectionLog): Promise<number> {
       log.timestamp,
       log.symbol,
       log.event,
-      log.details || null
+      log.details || null,
     );
 
     return result.lastInsertRowid as number;
@@ -138,7 +138,7 @@ export async function getOrderbookData(
   symbol: string,
   startTime: number,
   endTime: number,
-  timeframe?: string
+  timeframe?: string,
 ): Promise<OrderbookEntry[]> {
   try {
     const database = await initDatabase();
@@ -188,7 +188,7 @@ export async function getConnectionLogs(
   startTime?: number,
   endTime?: number,
   symbol?: string,
-  event?: string
+  event?: string,
 ): Promise<ConnectionLog[]> {
   try {
     const database = await initDatabase();
@@ -247,13 +247,13 @@ export async function getDBStats(): Promise<{
 
     const entriesBySymbol = database
       .prepare(
-        "SELECT symbol, COUNT(*) as count FROM orderbook_data GROUP BY symbol"
+        "SELECT symbol, COUNT(*) as count FROM orderbook_data GROUP BY symbol",
       )
       .all() as { symbol: string; count: number }[];
 
     const timeRange = database
       .prepare(
-        "SELECT MIN(timestamp) as oldest, MAX(timestamp) as newest FROM orderbook_data"
+        "SELECT MIN(timestamp) as oldest, MAX(timestamp) as newest FROM orderbook_data",
       )
       .get() as { oldest: number; newest: number };
 

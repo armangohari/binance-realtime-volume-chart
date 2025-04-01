@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
 import DataCollectorControls from "../../components/DataCollectorControls";
 import { LayoutWrapper } from "../../components/layout-wrapper";
@@ -99,7 +98,10 @@ export default function DataCollectorPage() {
                   Database Viewer
                 </Link>{" "}
                 or access the database directly at{" "}
-                <code className="text-primary">data/binance_orderbook.db</code>.
+                <code className="text-primary">
+                  src/data/binance_orderbook.db
+                </code>
+                .
               </p>
             </div>
           </div>

@@ -3,7 +3,7 @@ import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
 
-const DB_DIR = path.join(process.cwd(), "data");
+const DB_DIR = path.join(process.cwd(), "src/data");
 const DB_PATH = path.join(DB_DIR, "binance_orderbook.db");
 
 // API route to get database data
@@ -16,7 +16,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
           success: false,
           message: "Database file not found",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -66,7 +66,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
           success: false,
           message: "Invalid table parameter",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -119,7 +119,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
           error instanceof Error ? error.message : "Unknown error"
         }`,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

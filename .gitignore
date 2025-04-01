@@ -42,3 +42,7 @@ next-env.d.ts
 
 # archive
 .archive/
+
+# database files
+/data/*.db
+/src/data/*.db
