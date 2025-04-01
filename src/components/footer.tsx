@@ -79,19 +79,24 @@ export function Footer() {
             </p>
           </div>
         </div>
-        <div className="border-border/40 mt-8 flex flex-col items-center justify-between gap-4 border-t pt-8 md:flex-row">
-          <p className="text-muted-foreground text-center text-sm md:text-left">
-            &copy; {new Date().getFullYear()} Binance Analytics. All rights
-            reserved.
-          </p>
-          <p className="text-muted-foreground flex items-center text-sm">
-            <span>Built with</span>
-            <span className="mx-1 text-foreground">Next.js</span>
-            <span>&middot;</span>
-            <span className="mx-1 text-foreground">Tailwind CSS</span>
-            <span>&middot;</span>
-            <span className="mx-1 text-foreground">SQLite</span>
-          </p>
+        <div className="border-border/40 mt-8 border-t pt-8">
+          <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
+            <p className="text-muted-foreground text-center text-sm md:text-left">
+              &copy; {new Date().getFullYear()} Binance Analytics. All rights
+              reserved.
+            </p>
+            <p className="text-muted-foreground text-center text-sm md:text-left">
+              <span>Designed & Developed by </span>
+              <a
+                href="https://armangohari.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary inline-flex items-center hover:underline"
+              >
+                Arman Gohari
+              </a>
+            </p>
+          </div>
         </div>
       </div>
     </footer>
