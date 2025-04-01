@@ -26,9 +26,10 @@ export default function TradeVolumePage() {
               </h2>
               <p className="text-muted-foreground mb-4">
                 This chart displays real-time actual trade volume data from
-                Binance. Unlike the orderbook depth chart, this shows only
-                executed trades, providing a true picture of market activity and
-                volume.
+                Binance using TradingView&apos;s Lightweight Charts™. This
+                professional-grade charting library shows only executed trades,
+                providing a true picture of market activity and volume with
+                interactive, high-performance visualization.
               </p>
               <div className="bg-card/50 rounded-md p-4">
                 <h3 className="mb-2 text-lg font-medium">How to Use</h3>
@@ -58,6 +59,13 @@ export default function TradeVolumePage() {
                     <span>
                       Blue bars indicate buy dominance, red bars indicate sell
                       dominance
+                    </span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="mr-2">•</span>
+                    <span>
+                      Interact with the chart to zoom in/out and view specific
+                      timeframes
                     </span>
                   </li>
                 </ul>

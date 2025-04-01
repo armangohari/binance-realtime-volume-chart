@@ -26,9 +26,11 @@ export default function RealtimeVolumePage() {
               </h2>
               <p className="text-muted-foreground mb-4">
                 This chart displays real-time volume data from Binance&apos;s
-                orderbook. It helps traders identify buying and selling pressure
-                in the market by visualizing the total volume and the net
-                pressure between buys and sells.
+                orderbook using TradingView&apos;s Lightweight Charts™. This
+                professional-grade charting library helps traders identify
+                buying and selling pressure in the market by visualizing the
+                total volume and the net pressure between buys and sells with
+                high performance and low footprint.
               </p>
               <div className="bg-card/50 rounded-md p-4">
                 <h3 className="mb-2 text-lg font-medium">How to Use</h3>
@@ -58,6 +60,12 @@ export default function RealtimeVolumePage() {
                     <span>
                       Blue bars indicate buy dominance, red bars indicate sell
                       dominance
+                    </span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="mr-2">•</span>
+                    <span>
+                      Mouse over the chart to see precise volume values
                     </span>
                   </li>
                 </ul>
