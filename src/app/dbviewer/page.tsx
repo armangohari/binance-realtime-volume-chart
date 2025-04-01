@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import Link from "next/link";
-import { LayoutWrapper } from "../components/layout-wrapper";
+import { LayoutWrapper } from "../../components/layout-wrapper";
 import { MdDownload, MdStorage, MdTableView } from "react-icons/md";
 
 interface OrderbookEntry {

@@ -1,7 +1,7 @@
 "use client";
 
-import BinanceTradeVolumeChart from "../components/BinanceTradeVolumeChart";
-import { LayoutWrapper } from "../components/layout-wrapper";
+import BinanceTradeVolumeChart from "../../components/BinanceTradeVolumeChart";
+import { LayoutWrapper } from "../../components/layout-wrapper";
 import Link from "next/link";
 import { MdShowChart, MdBarChart, MdStorage } from "react-icons/md";
 

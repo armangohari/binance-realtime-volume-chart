@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LayoutWrapper } from "./components/layout-wrapper";
+import { LayoutWrapper } from "../components/layout-wrapper";
 import {
   MdShowChart,
   MdDownload,

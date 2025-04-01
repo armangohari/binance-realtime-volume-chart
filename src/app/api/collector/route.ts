@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDBStats } from "../../utils/dbService";
+import { getDBStats } from "../../../utils/dbService";
 
 // For server-side only modules in Next.js
 import {
   startDataCollection,
   stopDataCollection,
   getCollectorStatus,
-} from "../../utils/serverCollector";
+} from "../../../utils/serverCollector";
 
 // Track if the collector is running globally
 let isCollectorRunning = false;
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           success: false,
           message: 'Invalid action. Use "start" or "stop".',
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
   } catch (error) {
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           error instanceof Error ? error.message : "Unknown error"
         }`,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -95,7 +95,7 @@ export async function GET(): Promise<NextResponse> {
           error instanceof Error ? error.message : "Unknown error"
         }`,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

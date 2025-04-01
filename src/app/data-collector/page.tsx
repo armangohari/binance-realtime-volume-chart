@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import DataCollectorControls from "../components/DataCollectorControls";
-import { LayoutWrapper } from "../components/layout-wrapper";
+import DataCollectorControls from "../../components/DataCollectorControls";
+import { LayoutWrapper } from "../../components/layout-wrapper";
 import { MdDataset, MdOutlineErrorOutline, MdSettings } from "react-icons/md";
 
 export default function DataCollectorPage() {

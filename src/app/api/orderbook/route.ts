@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getOrderbookData, getAvailableSymbols } from "../../utils/dbService";
+import {
+  getOrderbookData,
+  getAvailableSymbols,
+} from "../../../utils/dbService";
 
 // API route to get orderbook data for a specific symbol and time range
 export async function GET(req: NextRequest): Promise<NextResponse> {
@@ -25,7 +28,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
           success: false,
           message: "Symbol parameter is required",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -35,7 +38,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
           success: false,
           message: "Start time and end time parameters are required",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -49,7 +52,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
           success: false,
           message: "Start time and end time must be valid integers",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -58,7 +61,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       symbol,
       startTimeMs,
       endTimeMs,
-      timeframe || undefined
+      timeframe || undefined,
     );
 
     // Transform data format to match what the chart expects
@@ -86,7 +89,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
           error instanceof Error ? error.message : "Unknown error"
         }`,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
