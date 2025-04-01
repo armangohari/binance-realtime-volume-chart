@@ -57,6 +57,7 @@ export default function BinanceTradeVolumeChart() {
   const wsRef = useRef<WebSocket | null>(null);
   const [reconnectCount, setReconnectCount] = useState<number>(0);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isMountedRef = useRef<boolean>(true);
 
   // Create the chart theme
   const getChartTheme = () => {
@@ -74,6 +75,40 @@ export default function BinanceTradeVolumeChart() {
   const borderColor = "border-[#252830]";
   const controlBgColor = "bg-[#161b24]";
   const controlBorderColor = "border-[#252a36]";
+
+  // Set up mounted ref for component lifecycle tracking
+  useEffect(() => {
+    // Set mounted flag to true
+    isMountedRef.current = true;
+
+    // Clean up on unmount
+    return () => {
+      // Set mounted flag to false to prevent state updates after unmounting
+      isMountedRef.current = false;
+
+      // Clear any reconnect timeouts
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+
+      // Close WebSocket if open
+      if (wsRef.current) {
+        console.log("Closing WebSocket due to component unmount");
+        try {
+          if (
+            wsRef.current.readyState !== 3 &&
+            wsRef.current.readyState !== 2
+          ) {
+            wsRef.current.close(1000, "Component unmounted");
+          }
+        } catch (err) {
+          console.error("Error closing WebSocket on unmount:", err);
+        }
+        wsRef.current = null;
+      }
+    };
+  }, []);
 
   // Initialize charts
   useEffect(() => {
@@ -245,6 +280,12 @@ export default function BinanceTradeVolumeChart() {
 
   // Define reconnect function with the latest timeframe from closure
   const reconnectWithCurrentTimeframe = () => {
+    // Don't reconnect if component is unmounted
+    if (!isMountedRef.current) {
+      console.log("Component unmounted, skipping reconnect");
+      return;
+    }
+
     // Calculate backoff time, starting from 1 second and increasing exponentially
     // Capped at 30 seconds
     const backoffTime = Math.min(1000 * Math.pow(1.5, reconnectCount), 30000);
@@ -279,6 +320,12 @@ export default function BinanceTradeVolumeChart() {
     }
 
     reconnectTimeoutRef.current = setTimeout(() => {
+      // Check if component is still mounted before continuing
+      if (!isMountedRef.current) {
+        console.log("Component unmounted during reconnect timeout");
+        return;
+      }
+
       setReconnectCount((prev) => prev + 1);
       setLastUpdate(`Reconnecting (attempt ${reconnectCount + 1})...`);
 
@@ -291,6 +338,9 @@ export default function BinanceTradeVolumeChart() {
           symbol,
           // onOpen
           () => {
+            // Check if component is still mounted before updating state
+            if (!isMountedRef.current) return;
+
             console.log("Connected to Binance WebSocket");
             setConnected(true);
             setLastUpdate("Connected to Binance WebSocket");
@@ -298,6 +348,9 @@ export default function BinanceTradeVolumeChart() {
           },
           // onClose
           (event) => {
+            // Check if component is still mounted before updating state
+            if (!isMountedRef.current) return;
+
             console.log("Disconnected from Binance WebSocket", event);
             setConnected(false);
             setLastUpdate(
@@ -307,12 +360,15 @@ export default function BinanceTradeVolumeChart() {
             );
 
             // Only attempt to reconnect if this wasn't a normal closure
-            if (event.code !== 1000) {
+            if (event.code !== 1000 && isMountedRef.current) {
               reconnectWithCurrentTimeframe();
             }
           },
           // onError
           (error) => {
+            // Check if component is still mounted before updating state
+            if (!isMountedRef.current) return;
+
             console.error("WebSocket error:", error);
             setLastUpdate(
               `WebSocket error: ${new Date().toLocaleTimeString()}`,
@@ -321,6 +377,9 @@ export default function BinanceTradeVolumeChart() {
           },
           // onMessage
           (event) => {
+            // Check if component is still mounted before processing data
+            if (!isMountedRef.current) return;
+
             try {
               const data = JSON.parse(event.data) as BinanceTrade;
 
@@ -425,13 +484,22 @@ export default function BinanceTradeVolumeChart() {
     );
 
     // Add a small delay before reconnecting to ensure proper cleanup
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
+      // Check if component is still mounted before creating WebSocket
+      if (!isMountedRef.current) {
+        console.log("Component unmounted, skipping WebSocket creation");
+        return;
+      }
+
       try {
         // Create WebSocket connection using the safer method
         const ws = createBinanceTradeWebSocket(
           symbol,
           // onOpen
           () => {
+            // Check if component is still mounted before updating state
+            if (!isMountedRef.current) return;
+
             console.log("Connected to Binance WebSocket");
             setConnected(true);
             setLastUpdate("Connected to Binance WebSocket");
@@ -439,6 +507,9 @@ export default function BinanceTradeVolumeChart() {
           },
           // onClose
           (event) => {
+            // Check if component is still mounted before updating state
+            if (!isMountedRef.current) return;
+
             console.log("Disconnected from Binance WebSocket", event);
             setConnected(false);
             setLastUpdate(
@@ -448,12 +519,15 @@ export default function BinanceTradeVolumeChart() {
             );
 
             // Only attempt to reconnect if this wasn't a normal closure
-            if (event.code !== 1000) {
+            if (event.code !== 1000 && isMountedRef.current) {
               reconnectWithCurrentTimeframe();
             }
           },
           // onError
           (error) => {
+            // Check if component is still mounted before updating state
+            if (!isMountedRef.current) return;
+
             console.error("WebSocket error:", error);
             setLastUpdate(
               `WebSocket error: ${new Date().toLocaleTimeString()}`,
@@ -462,6 +536,9 @@ export default function BinanceTradeVolumeChart() {
           },
           // onMessage
           (event) => {
+            // Check if component is still mounted before processing data
+            if (!isMountedRef.current) return;
+
             try {
               const data = JSON.parse(event.data) as BinanceTrade;
 
@@ -499,44 +576,66 @@ export default function BinanceTradeVolumeChart() {
               }
 
               // Update state with the latest data
-              const newData = Array.from(dataMap.values())
-                .sort((a, b) => a.time - b.time)
-                .slice(-100); // Keep last 100 bars for performance
+              if (isMountedRef.current) {
+                const newData = Array.from(dataMap.values())
+                  .sort((a, b) => a.time - b.time)
+                  .slice(-100); // Keep last 100 bars for performance
 
-              console.log(
-                `WebSocket data processed: ${newData.length} bars, buy: ${buyVolume}, sell: ${sellVolume}`,
-              );
-              setVolumeData(newData);
-              setLastUpdate(
-                `Last update: ${formatTimestamp(now)} (${
-                  currentTimeframeRef.current
-                })`,
-              );
+                console.log(
+                  `WebSocket data processed: ${newData.length} bars, buy: ${buyVolume}, sell: ${sellVolume}`,
+                );
+                setVolumeData(newData);
+                setLastUpdate(
+                  `Last update: ${formatTimestamp(now)} (${
+                    currentTimeframeRef.current
+                  })`,
+                );
 
-              // Set loading to false once we have data
-              if (loading && newData.length > 0) {
-                setLoading(false);
+                // Set loading to false once we have data
+                if (loading && newData.length > 0) {
+                  setLoading(false);
+                }
               }
             } catch (error) {
               console.error("Error processing WebSocket message:", error);
             }
           },
         );
-        wsRef.current = ws;
+        if (isMountedRef.current) {
+          wsRef.current = ws;
+        } else {
+          // If component unmounted during WebSocket creation, close it immediately
+          ws.close(1000, "Component unmounted");
+        }
       } catch (error) {
         console.error("Error creating WebSocket:", error);
-        // Try to reconnect
-        reconnectWithCurrentTimeframe();
+        // Try to reconnect only if component is still mounted
+        if (isMountedRef.current) {
+          reconnectWithCurrentTimeframe();
+        }
       }
-    }, 0);
+    }, 100); // Small delay to ensure proper cleanup
 
     return () => {
+      // Clear the timeout on cleanup
+      clearTimeout(timeoutId);
+
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
       }
 
       if (wsRef.current) {
-        wsRef.current.close();
+        try {
+          if (
+            wsRef.current.readyState !== 3 &&
+            wsRef.current.readyState !== 2
+          ) {
+            wsRef.current.close(1000, "Effect cleanup");
+          }
+        } catch (error) {
+          console.error("Error closing WebSocket in cleanup:", error);
+        }
         wsRef.current = null;
       }
     };

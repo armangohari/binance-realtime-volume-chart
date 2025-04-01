@@ -57,6 +57,7 @@ export default function BinanceVolumeChart() {
   const wsRef = useRef<WebSocket | null>(null);
   const [reconnectCount, setReconnectCount] = useState<number>(0);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isMountedRef = useRef<boolean>(true);
 
   // Create the chart theme
   const getChartTheme = () => {
@@ -246,6 +247,12 @@ export default function BinanceVolumeChart() {
 
   // Define reconnect function with the latest timeframe from closure
   const reconnectWithCurrentTimeframe = () => {
+    // Don't reconnect if component is unmounted
+    if (!isMountedRef.current) {
+      console.log("Component unmounted, skipping reconnect");
+      return;
+    }
+
     // Calculate backoff time, starting from 1 second and increasing exponentially
     // Capped at 30 seconds
     const backoffTime = Math.min(1000 * Math.pow(1.5, reconnectCount), 30000);
@@ -280,6 +287,12 @@ export default function BinanceVolumeChart() {
     }
 
     reconnectTimeoutRef.current = setTimeout(() => {
+      // Check if component is still mounted before continuing
+      if (!isMountedRef.current) {
+        console.log("Component unmounted during reconnect timeout");
+        return;
+      }
+
       setReconnectCount((prev) => prev + 1);
       setLastUpdate(`Reconnecting (attempt ${reconnectCount + 1})...`);
 
@@ -292,6 +305,9 @@ export default function BinanceVolumeChart() {
           symbol,
           // onOpen
           () => {
+            // Check if component is still mounted before updating state
+            if (!isMountedRef.current) return;
+
             console.log("Connected to Binance WebSocket");
             setConnected(true);
             setLastUpdate("Connected to Binance WebSocket");
@@ -299,6 +315,9 @@ export default function BinanceVolumeChart() {
           },
           // onClose
           (event) => {
+            // Check if component is still mounted before updating state
+            if (!isMountedRef.current) return;
+
             console.log("Disconnected from Binance WebSocket", event);
             setConnected(false);
             setLastUpdate(
@@ -308,162 +327,20 @@ export default function BinanceVolumeChart() {
             );
 
             // Only attempt to reconnect if this wasn't a normal closure
-            if (event.code !== 1000) {
+            if (event.code !== 1000 && isMountedRef.current) {
               reconnectWithCurrentTimeframe();
             }
           },
           // onError
           (error) => {
+            // Check if component is still mounted before updating state
+            if (!isMountedRef.current) return;
+
             console.error("WebSocket error:", error);
             setLastUpdate(
               `WebSocket error: ${new Date().toLocaleTimeString()}`,
             );
             // Allow the close handler to handle reconnection
-          },
-          // onMessage
-          (event) => {
-            try {
-              const data = JSON.parse(event.data) as BinanceDepthUpdate;
-
-              // Process orderbook data
-              if (data.b && data.a) {
-                // Bids and asks
-                // Get current timestamp and round it to the current timeframe
-                const now = Date.now();
-                // Use the ref to access the current timeframe value
-                const currentTimeFrameMs =
-                  TIMEFRAMES[
-                    currentTimeframeRef.current as keyof typeof TIMEFRAMES
-                  ] * 1000;
-                const timeframeTimestamp =
-                  Math.floor(now / currentTimeFrameMs) * currentTimeFrameMs;
-
-                // Process the depth data
-                const { buyVolume, sellVolume } = processDepthData(data);
-
-                // Update the data map
-                const dataMap = dataMapRef.current;
-
-                // If we have data for this timeframe already, update it
-                if (dataMap.has(timeframeTimestamp)) {
-                  const existing = dataMap.get(timeframeTimestamp)!;
-                  dataMap.set(timeframeTimestamp, {
-                    time: timeframeTimestamp,
-                    buyVolume: existing.buyVolume + buyVolume,
-                    sellVolume: existing.sellVolume + sellVolume,
-                  });
-                } else {
-                  // Otherwise create a new entry
-                  dataMap.set(timeframeTimestamp, {
-                    time: timeframeTimestamp,
-                    buyVolume,
-                    sellVolume,
-                  });
-                }
-
-                // Update state with the latest data
-                const newData = Array.from(dataMap.values())
-                  .sort((a, b) => a.time - b.time)
-                  .slice(-100); // Keep last 100 bars for performance
-
-                console.log(
-                  `WebSocket data processed: ${newData.length} bars, buy: ${buyVolume}, sell: ${sellVolume}`,
-                );
-                setVolumeData(newData);
-                setLastUpdate(
-                  `Last update: ${formatTimestamp(now)} (${
-                    currentTimeframeRef.current
-                  })`,
-                );
-              }
-            } catch (error) {
-              console.error("Error processing WebSocket message:", error);
-            }
-          },
-        );
-        wsRef.current = newWs;
-      } catch (error) {
-        console.error("Error creating WebSocket:", error);
-        // Try again after the backoff period
-        reconnectWithCurrentTimeframe();
-      }
-    }, backoffTime);
-  };
-
-  // Connect to Binance WebSocket on component mount or when symbol/timeframe changes
-  useEffect(() => {
-    if (!totalVolumeChartComponents.current || !pressureChartComponents.current)
-      return;
-
-    // Clear any existing reconnect timeout
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = null;
-    }
-
-    // Close existing WS connection properly
-    if (wsRef.current) {
-      // Use a local variable to avoid race conditions
-      const ws = wsRef.current;
-      // Set to null first to prevent multiple closes
-      wsRef.current = null;
-
-      try {
-        // Only close if readyState is not already CLOSED (3) or CLOSING (2)
-        if (ws.readyState !== 3 && ws.readyState !== 2) {
-          console.log(`Closing existing WebSocket connection for ${symbol}...`);
-          ws.close(1000, "Timeframe changed");
-        }
-      } catch (err) {
-        console.error("Error closing WebSocket:", err);
-      }
-    }
-
-    // Reset data map for new connection
-    dataMapRef.current = new Map<number, VolumeData>();
-
-    // Clear existing volume data when timeframe changes
-    setVolumeData([]);
-
-    console.log(
-      `Timeframe changed to ${selectedTimeframe}, reset data and reconnecting...`,
-    );
-
-    // Add a small delay before reconnecting to ensure proper cleanup
-    setTimeout(() => {
-      try {
-        // Create WebSocket connection using the safer method
-        const ws = createBinanceWebSocket(
-          symbol,
-          // onOpen
-          () => {
-            console.log("Connected to Binance WebSocket");
-            setConnected(true);
-            setLastUpdate("Connected to Binance WebSocket");
-            setReconnectCount(0); // Reset reconnect count on successful connection
-          },
-          // onClose
-          (event) => {
-            console.log("Disconnected from Binance WebSocket", event);
-            setConnected(false);
-            setLastUpdate(
-              `Disconnected from Binance WebSocket: ${
-                event.reason || "Unknown reason"
-              }`,
-            );
-
-            // Only attempt to reconnect if this wasn't a normal closure
-            if (event.code !== 1000) {
-              reconnectWithCurrentTimeframe();
-            }
-          },
-          // onError
-          (error) => {
-            console.error("WebSocket error:", error);
-            setLastUpdate(
-              `WebSocket error: ${new Date().toLocaleTimeString()}`,
-            );
-            // Error will trigger the onclose handler which will handle reconnection
           },
           // onMessage
           (event) => {
@@ -531,21 +408,212 @@ export default function BinanceVolumeChart() {
             }
           },
         );
-        wsRef.current = ws;
+        wsRef.current = newWs;
       } catch (error) {
         console.error("Error creating WebSocket:", error);
-        // Try to reconnect
+        // Try again after the backoff period
         reconnectWithCurrentTimeframe();
       }
-    }, 0);
+    }, backoffTime);
+  };
+
+  // Connect to Binance WebSocket on component mount or when symbol/timeframe changes
+  useEffect(() => {
+    if (
+      !isMountedRef.current ||
+      !totalVolumeChartComponents.current ||
+      !pressureChartComponents.current
+    )
+      return;
+
+    // Clear any existing reconnect timeout
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+
+    // Close existing WS connection properly
+    if (wsRef.current) {
+      // Use a local variable to avoid race conditions
+      const ws = wsRef.current;
+      // Set to null first to prevent multiple closes
+      wsRef.current = null;
+
+      try {
+        // Only close if readyState is not already CLOSED (3) or CLOSING (2)
+        if (ws.readyState !== 3 && ws.readyState !== 2) {
+          console.log(`Closing existing WebSocket connection for ${symbol}...`);
+          ws.close(1000, "Timeframe changed");
+        }
+      } catch (err) {
+        console.error("Error closing WebSocket:", err);
+      }
+    }
+
+    // Reset data map for new connection
+    dataMapRef.current = new Map<number, VolumeData>();
+
+    // Clear existing volume data when timeframe changes
+    setVolumeData([]);
+
+    console.log(
+      `Timeframe changed to ${selectedTimeframe}, reset data and reconnecting...`,
+    );
+
+    // Add a small delay before reconnecting to ensure proper cleanup
+    const timeoutId = setTimeout(() => {
+      // Check if component is still mounted before creating WebSocket
+      if (!isMountedRef.current) {
+        console.log("Component unmounted, skipping WebSocket creation");
+        return;
+      }
+
+      try {
+        // Create WebSocket connection using the safer method
+        const ws = createBinanceWebSocket(
+          symbol,
+          // onOpen
+          () => {
+            if (!isMountedRef.current) return;
+
+            console.log("Connected to Binance WebSocket");
+            setConnected(true);
+            setLastUpdate("Connected to Binance WebSocket");
+            setReconnectCount(0); // Reset reconnect count on successful connection
+          },
+          // onClose
+          (event) => {
+            if (!isMountedRef.current) return;
+
+            console.log("Disconnected from Binance WebSocket", event);
+            setConnected(false);
+            setLastUpdate(
+              `Disconnected from Binance WebSocket: ${
+                event.reason || "Unknown reason"
+              }`,
+            );
+
+            // Only attempt to reconnect if this wasn't a normal closure
+            if (event.code !== 1000 && isMountedRef.current) {
+              reconnectWithCurrentTimeframe();
+            }
+          },
+          // onError
+          (error) => {
+            if (!isMountedRef.current) return;
+
+            console.error("WebSocket error:", error);
+            setLastUpdate(
+              `WebSocket error: ${new Date().toLocaleTimeString()}`,
+            );
+            // Error will trigger the onclose handler which will handle reconnection
+          },
+          // onMessage
+          (event) => {
+            if (!isMountedRef.current) return;
+
+            try {
+              const data = JSON.parse(event.data) as BinanceDepthUpdate;
+
+              // Process orderbook data
+              if (data.b && data.a) {
+                // Bids and asks
+                // Get current timestamp and round it to the current timeframe
+                const now = Date.now();
+                // Use the ref to access the current timeframe value
+                const currentTimeFrameMs =
+                  TIMEFRAMES[
+                    currentTimeframeRef.current as keyof typeof TIMEFRAMES
+                  ] * 1000;
+                const timeframeTimestamp =
+                  Math.floor(now / currentTimeFrameMs) * currentTimeFrameMs;
+
+                // Process the depth data
+                const { buyVolume, sellVolume } = processDepthData(data);
+
+                // Update the data map
+                const dataMap = dataMapRef.current;
+
+                // If we have data for this timeframe already, update it
+                if (dataMap.has(timeframeTimestamp)) {
+                  const existing = dataMap.get(timeframeTimestamp)!;
+                  dataMap.set(timeframeTimestamp, {
+                    time: timeframeTimestamp,
+                    buyVolume: existing.buyVolume + buyVolume,
+                    sellVolume: existing.sellVolume + sellVolume,
+                  });
+                } else {
+                  // Otherwise create a new entry
+                  dataMap.set(timeframeTimestamp, {
+                    time: timeframeTimestamp,
+                    buyVolume,
+                    sellVolume,
+                  });
+                }
+
+                // Update state with the latest data
+                if (isMountedRef.current) {
+                  const newData = Array.from(dataMap.values())
+                    .sort((a, b) => a.time - b.time)
+                    .slice(-100); // Keep last 100 bars for performance
+
+                  console.log(
+                    `WebSocket data processed: ${newData.length} bars, buy: ${buyVolume}, sell: ${sellVolume}`,
+                  );
+                  setVolumeData(newData);
+                  setLastUpdate(
+                    `Last update: ${formatTimestamp(now)} (${
+                      currentTimeframeRef.current
+                    })`,
+                  );
+
+                  // Set loading to false once we have data
+                  if (loading && newData.length > 0) {
+                    setLoading(false);
+                  }
+                }
+              }
+            } catch (error) {
+              console.error("Error processing WebSocket message:", error);
+            }
+          },
+        );
+
+        if (isMountedRef.current) {
+          wsRef.current = ws;
+        } else {
+          // If component unmounted during WebSocket creation, close it immediately
+          ws.close(1000, "Component unmounted");
+        }
+      } catch (error) {
+        console.error("Error creating WebSocket:", error);
+        // Try to reconnect only if component is still mounted
+        if (isMountedRef.current) {
+          reconnectWithCurrentTimeframe();
+        }
+      }
+    }, 100); // Small delay to ensure proper cleanup
 
     return () => {
+      // Clear the timeout on cleanup
+      clearTimeout(timeoutId);
+
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
       }
 
       if (wsRef.current) {
-        wsRef.current.close();
+        try {
+          if (
+            wsRef.current.readyState !== 3 &&
+            wsRef.current.readyState !== 2
+          ) {
+            wsRef.current.close(1000, "Effect cleanup");
+          }
+        } catch (error) {
+          console.error("Error closing WebSocket in cleanup:", error);
+        }
         wsRef.current = null;
       }
     };
@@ -619,6 +687,40 @@ export default function BinanceVolumeChart() {
       console.error("Error updating chart data:", error);
     }
   }, [volumeData]);
+
+  // Set up mounted ref for component lifecycle tracking
+  useEffect(() => {
+    // Set mounted flag to true
+    isMountedRef.current = true;
+
+    // Clean up on unmount
+    return () => {
+      // Set mounted flag to false to prevent state updates after unmounting
+      isMountedRef.current = false;
+
+      // Clear any reconnect timeouts
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+
+      // Close WebSocket if open
+      if (wsRef.current) {
+        console.log("Closing WebSocket due to component unmount");
+        try {
+          if (
+            wsRef.current.readyState !== 3 &&
+            wsRef.current.readyState !== 2
+          ) {
+            wsRef.current.close(1000, "Component unmounted");
+          }
+        } catch (err) {
+          console.error("Error closing WebSocket on unmount:", err);
+        }
+        wsRef.current = null;
+      }
+    };
+  }, []);
 
   return (
     <div
