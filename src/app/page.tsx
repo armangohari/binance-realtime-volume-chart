@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LayoutWrapper } from "./components/layout-wrapper";
 import {
   MdShowChart,
   MdDownload,
@@ -15,227 +16,206 @@ import {
 
 export default function Home() {
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-[#060a10] via-[#0a101b] to-[#060a10] p-8 text-white">
-      {/* Animated background elements */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -right-40 -top-40 h-[30rem] w-[30rem] animate-pulse rounded-full bg-blue-600/10 blur-3xl"></div>
-        <div className="absolute left-1/2 top-1/2 h-[40rem] w-[40rem] animate-pulse rounded-full bg-purple-600/5 blur-3xl"></div>
-        <div className="absolute -bottom-40 -left-40 h-[30rem] w-[30rem] animate-pulse rounded-full bg-blue-600/10 blur-3xl"></div>
-        <div className="absolute inset-0 bg-[#060a10]/50 backdrop-blur-3xl"></div>
-      </div>
+    <LayoutWrapper>
+      <div className="relative overflow-hidden py-16 sm:py-24">
+        {/* Background effects */}
+        <div className="absolute inset-0 z-0 overflow-hidden">
+          <div className="pointer-events-none">
+            <div className="animate-blob bg-primary/10 absolute right-1/3 top-0 h-96 w-96 rounded-full opacity-70 blur-3xl filter"></div>
+            <div className="animation-delay-2000 animate-blob bg-success/10 absolute bottom-0 left-1/4 h-96 w-96 rounded-full opacity-70 blur-3xl filter"></div>
+            <div className="animation-delay-4000 animate-blob bg-secondary/10 absolute right-1/4 top-1/3 h-96 w-96 rounded-full opacity-70 blur-3xl filter"></div>
+          </div>
+        </div>
 
-      {/* Header with enhanced typography and spacing */}
-      <div className="animate-fade-in relative z-10 mb-20 space-y-6 text-center">
-        <h1 className="animate-gradient-x bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 bg-clip-text text-5xl font-bold tracking-tight text-transparent md:text-6xl lg:text-7xl">
-          Binance Data Analytics
-        </h1>
-        <p className="mx-auto max-w-2xl text-lg font-medium leading-relaxed text-gray-300 md:text-xl">
-          Track, analyze, and visualize cryptocurrency market data with powerful
-          tools
-        </p>
-      </div>
+        {/* Hero section */}
+        <div className="container relative z-10">
+          <div className="mx-auto max-w-4xl space-y-5 text-center">
+            <h1 className="animate-gradient-x from-primary via-success to-primary font-heading bg-gradient-to-r bg-clip-text text-4xl font-bold tracking-tight text-transparent sm:text-5xl md:text-6xl">
+              Binance Data Analytics
+            </h1>
+            <p className="text-muted-foreground mx-auto max-w-2xl text-xl">
+              Track, analyze, and visualize cryptocurrency market data with
+              powerful tools for better trading decisions.
+            </p>
+            <div className="mt-8 flex justify-center gap-4">
+              <Link
+                href="/realtime-volume"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 focus:ring-primary/30 inline-flex items-center justify-center rounded-md px-5 py-2.5 text-sm font-medium shadow transition-colors focus:outline-none focus:ring-4"
+              >
+                View Charts
+                <MdArrowForward className="ml-2 h-4 w-4" />
+              </Link>
+              <Link
+                href="/data-collector"
+                className="border-input hover:bg-accent hover:text-accent-foreground focus:ring-primary/30 inline-flex items-center justify-center rounded-md border bg-background px-5 py-2.5 text-sm font-medium shadow-sm focus:outline-none focus:ring-4"
+              >
+                Manage Collection
+              </Link>
+            </div>
+          </div>
 
-      {/* Card grid with enhanced spacing and typography */}
-      <div className="animate-fade-in-up relative z-10 grid w-full max-w-7xl grid-cols-1 gap-8 px-4 sm:px-8 md:grid-cols-2 lg:grid-cols-4 lg:gap-12">
-        <Link
-          href="/realtime-volume"
-          className="group relative transform overflow-hidden rounded-2xl transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02]"
-        >
-          <div className="absolute inset-0 z-0 bg-gradient-to-br from-blue-600/80 to-blue-800/80 opacity-0 transition-opacity duration-500 group-hover:opacity-100"></div>
-          <div className="relative z-10 h-full rounded-2xl border border-[#252830] bg-[#0f1217]/90 p-8 transition-all duration-300 group-hover:border-blue-500/50 group-hover:shadow-[0_0_30px_rgba(59,130,246,0.3)]">
-            <div className="flex h-full flex-col items-center space-y-6 text-center">
-              <div className="mb-4 flex h-20 w-20 rotate-3 transform items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 shadow-xl transition-transform duration-500 group-hover:rotate-6 group-hover:scale-110">
-                <MdShowChart className="h-10 w-10" />
+          {/* Feature cards */}
+          <div className="mt-24 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <Link
+              href="/realtime-volume"
+              className="border-border/40 bg-card hover:border-primary/50 group relative overflow-hidden rounded-lg border p-6 shadow-sm transition-all duration-200 hover:shadow-md"
+            >
+              <div className="bg-primary/10 text-primary mb-5 flex h-12 w-12 items-center justify-center rounded-md">
+                <MdShowChart className="h-6 w-6" />
               </div>
-              <h2 className="text-2xl font-bold transition-colors duration-300 group-hover:text-blue-300">
+              <h2 className="mb-2 text-xl font-semibold tracking-tight">
                 Orderbook Volume
               </h2>
-              <p className="text-base leading-relaxed text-gray-400 transition-colors duration-300 group-hover:text-gray-200">
+              <p className="text-muted-foreground">
                 Monitor realtime orderbook depth and market pressure across
-                different trading pairs
+                trading pairs.
               </p>
-              <div className="mt-auto pt-4">
-                <span className="inline-flex items-center rounded-lg bg-blue-500/10 px-6 py-2.5 text-sm font-medium text-blue-400 transition-colors group-hover:bg-blue-500/20 group-hover:text-white">
-                  View Charts
-                  <MdArrowForward className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
-                </span>
-              </div>
-            </div>
-          </div>
-        </Link>
+              <span className="text-primary mt-4 inline-flex items-center text-sm font-medium">
+                View Charts
+                <MdArrowForward className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </span>
+            </Link>
 
-        <Link
-          href="/trade-volume"
-          className="group relative transform overflow-hidden rounded-2xl transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02]"
-        >
-          <div className="absolute inset-0 z-0 bg-gradient-to-br from-cyan-600/80 to-cyan-800/80 opacity-0 transition-opacity duration-500 group-hover:opacity-100"></div>
-          <div className="relative z-10 h-full rounded-2xl border border-[#252830] bg-[#0f1217]/90 p-8 transition-all duration-300 group-hover:border-cyan-500/50 group-hover:shadow-[0_0_30px_rgba(6,182,212,0.3)]">
-            <div className="flex h-full flex-col items-center space-y-6 text-center">
-              <div className="mb-4 flex h-20 w-20 rotate-3 transform items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-cyan-700 shadow-xl transition-transform duration-500 group-hover:rotate-6 group-hover:scale-110">
-                <MdBarChart className="h-10 w-10" />
+            <Link
+              href="/trade-volume"
+              className="border-border/40 bg-card hover:border-primary/50 group relative overflow-hidden rounded-lg border p-6 shadow-sm transition-all duration-200 hover:shadow-md"
+            >
+              <div className="bg-primary/10 text-primary mb-5 flex h-12 w-12 items-center justify-center rounded-md">
+                <MdBarChart className="h-6 w-6" />
               </div>
-              <h2 className="text-2xl font-bold transition-colors duration-300 group-hover:text-cyan-300">
+              <h2 className="mb-2 text-xl font-semibold tracking-tight">
                 Trade Volume
               </h2>
-              <p className="text-base leading-relaxed text-gray-400 transition-colors duration-300 group-hover:text-gray-200">
+              <p className="text-muted-foreground">
                 Track actual executed trades and volume in real-time for
-                accurate market activity
+                accurate market activity.
               </p>
-              <div className="mt-auto pt-4">
-                <span className="inline-flex items-center rounded-lg bg-cyan-500/10 px-6 py-2.5 text-sm font-medium text-cyan-400 transition-colors group-hover:bg-cyan-500/20 group-hover:text-white">
-                  View Charts
-                  <MdArrowForward className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
-                </span>
-              </div>
-            </div>
-          </div>
-        </Link>
+              <span className="text-primary mt-4 inline-flex items-center text-sm font-medium">
+                View Charts
+                <MdArrowForward className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </span>
+            </Link>
 
-        <Link
-          href="/data-collector"
-          className="group relative transform overflow-hidden rounded-2xl transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02]"
-        >
-          <div className="absolute inset-0 z-0 bg-gradient-to-br from-green-600/80 to-green-800/80 opacity-0 transition-opacity duration-500 group-hover:opacity-100"></div>
-          <div className="relative z-10 h-full rounded-2xl border border-[#252830] bg-[#0f1217]/90 p-8 transition-all duration-300 group-hover:border-green-500/50 group-hover:shadow-[0_0_30px_rgba(34,197,94,0.3)]">
-            <div className="flex h-full flex-col items-center space-y-6 text-center">
-              <div className="mb-4 flex h-20 w-20 -rotate-3 transform items-center justify-center rounded-2xl bg-gradient-to-br from-green-500 to-green-700 shadow-xl transition-transform duration-500 group-hover:-rotate-6 group-hover:scale-110">
-                <MdDownload className="h-10 w-10" />
+            <Link
+              href="/data-collector"
+              className="border-border/40 bg-card hover:border-primary/50 group relative overflow-hidden rounded-lg border p-6 shadow-sm transition-all duration-200 hover:shadow-md"
+            >
+              <div className="bg-primary/10 text-primary mb-5 flex h-12 w-12 items-center justify-center rounded-md">
+                <MdDownload className="h-6 w-6" />
               </div>
-              <h2 className="text-2xl font-bold transition-colors duration-300 group-hover:text-green-300">
+              <h2 className="mb-2 text-xl font-semibold tracking-tight">
                 Data Collector
               </h2>
-              <p className="text-base leading-relaxed text-gray-400 transition-colors duration-300 group-hover:text-gray-200">
+              <p className="text-muted-foreground">
                 Monitor and control the data collection process that stores
-                market data in the database
+                market data in the database.
               </p>
-              <div className="mt-auto pt-4">
-                <span className="inline-flex items-center rounded-lg bg-green-500/10 px-6 py-2.5 text-sm font-medium text-green-400 transition-colors group-hover:bg-green-500/20 group-hover:text-white">
-                  Manage Collection
-                  <MdArrowForward className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
-                </span>
-              </div>
-            </div>
-          </div>
-        </Link>
+              <span className="text-primary mt-4 inline-flex items-center text-sm font-medium">
+                Manage Collection
+                <MdArrowForward className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </span>
+            </Link>
 
-        <Link
-          href="/dbviewer"
-          className="group relative transform overflow-hidden rounded-2xl transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02]"
-        >
-          <div className="absolute inset-0 z-0 bg-gradient-to-br from-purple-600/80 to-purple-800/80 opacity-0 transition-opacity duration-500 group-hover:opacity-100"></div>
-          <div className="relative z-10 h-full rounded-2xl border border-[#252830] bg-[#0f1217]/90 p-8 transition-all duration-300 group-hover:border-purple-500/50 group-hover:shadow-[0_0_30px_rgba(168,85,247,0.3)]">
-            <div className="flex h-full flex-col items-center space-y-6 text-center">
-              <div className="mb-4 flex h-20 w-20 rotate-3 transform items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-purple-700 shadow-xl transition-transform duration-500 group-hover:rotate-6 group-hover:scale-110">
-                <MdStorage className="h-10 w-10" />
+            <Link
+              href="/dbviewer"
+              className="border-border/40 bg-card hover:border-primary/50 group relative overflow-hidden rounded-lg border p-6 shadow-sm transition-all duration-200 hover:shadow-md"
+            >
+              <div className="bg-primary/10 text-primary mb-5 flex h-12 w-12 items-center justify-center rounded-md">
+                <MdStorage className="h-6 w-6" />
               </div>
-              <h2 className="text-2xl font-bold transition-colors duration-300 group-hover:text-purple-300">
+              <h2 className="mb-2 text-xl font-semibold tracking-tight">
                 Database Viewer
               </h2>
-              <p className="text-base leading-relaxed text-gray-400 transition-colors duration-300 group-hover:text-gray-200">
+              <p className="text-muted-foreground">
                 Explore and analyze the collected market data with table views
-                and export options
+                and export options.
               </p>
-              <div className="mt-auto pt-4">
-                <span className="inline-flex items-center rounded-lg bg-purple-500/10 px-6 py-2.5 text-sm font-medium text-purple-400 transition-colors group-hover:bg-purple-500/20 group-hover:text-white">
-                  Explore Data
-                  <MdArrowForward className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
-                </span>
-              </div>
-            </div>
+              <span className="text-primary mt-4 inline-flex items-center text-sm font-medium">
+                Explore Data
+                <MdArrowForward className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </span>
+            </Link>
           </div>
-        </Link>
-      </div>
 
-      {/* Footer section with enhanced spacing and typography */}
-      <div className="animate-fade-in-up relative z-10 mt-24 max-w-4xl border-t border-gray-800/50 pt-16 text-center">
-        <div className="rounded-3xl border border-gray-800/50 bg-[#0f1217]/70 p-10 shadow-2xl backdrop-blur-xl">
-          <div className="mb-12">
-            <h3 className="mb-6 bg-gradient-to-r from-gray-100 to-gray-300 bg-clip-text text-3xl font-bold text-transparent">
+          {/* About section */}
+          <div className="border-border/40 bg-card mx-auto mt-24 max-w-5xl rounded-lg border p-8 shadow-sm md:p-10">
+            <h2 className="mb-6 text-center text-3xl font-bold tracking-tight">
               About This Project
-            </h3>
-            <p className="text-lg leading-relaxed text-gray-300">
+            </h2>
+            <p className="text-muted-foreground mb-10 text-center text-lg">
               This application collects and visualizes Binance orderbook data to
               help traders identify volume patterns and market pressure. The
               data collector runs in the background, saving data to a local
               SQLite database for historical analysis.
             </p>
+
+            <div className="grid gap-6 sm:grid-cols-3">
+              <div className="border-border/40 bg-card/50 rounded-lg border p-6">
+                <h3 className="mb-4 flex items-center text-lg font-medium text-foreground">
+                  <MdBolt className="text-primary mr-2 h-5 w-5" />
+                  Data Collection
+                </h3>
+                <ul className="text-muted-foreground space-y-3 text-sm">
+                  <li className="flex items-start">
+                    <MdDataUsage className="text-primary mr-2 mt-0.5 h-4 w-4 flex-shrink-0" />
+                    <span>WebSocket to Binance API</span>
+                  </li>
+                  <li className="flex items-start">
+                    <MdBarChart className="text-primary mr-2 mt-0.5 h-4 w-4 flex-shrink-0" />
+                    <span>Real-time orderbook processing</span>
+                  </li>
+                  <li className="flex items-start">
+                    <MdTimer className="text-primary mr-2 mt-0.5 h-4 w-4 flex-shrink-0" />
+                    <span>Data aggregation by timeframe</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="border-border/40 bg-card/50 rounded-lg border p-6">
+                <h3 className="mb-4 flex items-center text-lg font-medium text-foreground">
+                  <MdQueryStats className="text-primary mr-2 h-5 w-5" />
+                  Visualization
+                </h3>
+                <ul className="text-muted-foreground space-y-3 text-sm">
+                  <li className="flex items-start">
+                    <MdShowChart className="text-primary mr-2 mt-0.5 h-4 w-4 flex-shrink-0" />
+                    <span>Interactive volume charts</span>
+                  </li>
+                  <li className="flex items-start">
+                    <MdBarChart className="text-primary mr-2 mt-0.5 h-4 w-4 flex-shrink-0" />
+                    <span>Buy/sell pressure analysis</span>
+                  </li>
+                  <li className="flex items-start">
+                    <MdTimer className="text-primary mr-2 mt-0.5 h-4 w-4 flex-shrink-0" />
+                    <span>Multiple timeframe views</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="border-border/40 bg-card/50 rounded-lg border p-6">
+                <h3 className="mb-4 flex items-center text-lg font-medium text-foreground">
+                  <MdTrackChanges className="text-primary mr-2 h-5 w-5" />
+                  Analysis
+                </h3>
+                <ul className="text-muted-foreground space-y-3 text-sm">
+                  <li className="flex items-start">
+                    <MdStorage className="text-primary mr-2 mt-0.5 h-4 w-4 flex-shrink-0" />
+                    <span>Historical data browsing</span>
+                  </li>
+                  <li className="flex items-start">
+                    <MdFileDownload className="text-primary mr-2 mt-0.5 h-4 w-4 flex-shrink-0" />
+                    <span>CSV data export</span>
+                  </li>
+                  <li className="flex items-start">
+                    <MdDataUsage className="text-primary mr-2 mt-0.5 h-4 w-4 flex-shrink-0" />
+                    <span>Connection log tracking</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
-
-          <div className="grid grid-cols-1 gap-8 text-left md:grid-cols-3">
-            <div className="rounded-2xl border border-blue-500/10 bg-gradient-to-br from-blue-500/5 to-blue-700/5 p-6">
-              <h4 className="mb-6 flex items-center text-xl font-semibold text-blue-400">
-                <MdBolt className="mr-2 h-6 w-6" />
-                Data Collection
-              </h4>
-              <ul className="space-y-4 text-gray-400">
-                <li className="flex items-start">
-                  <MdDataUsage className="mr-3 mt-0.5 h-5 w-5 flex-shrink-0 text-blue-500" />
-                  <span>WebSocket connections to Binance API</span>
-                </li>
-                <li className="flex items-start">
-                  <MdBarChart className="mr-3 mt-0.5 h-5 w-5 flex-shrink-0 text-blue-500" />
-                  <span>Real-time orderbook processing</span>
-                </li>
-                <li className="flex items-start">
-                  <MdTimer className="mr-3 mt-0.5 h-5 w-5 flex-shrink-0 text-blue-500" />
-                  <span>Data aggregation by timeframe</span>
-                </li>
-              </ul>
-            </div>
-
-            <div className="rounded-2xl border border-green-500/10 bg-gradient-to-br from-green-500/5 to-green-700/5 p-6">
-              <h4 className="mb-6 flex items-center text-xl font-semibold text-green-400">
-                <MdQueryStats className="mr-2 h-6 w-6" />
-                Visualization
-              </h4>
-              <ul className="space-y-4 text-gray-400">
-                <li className="flex items-start">
-                  <MdShowChart className="mr-3 mt-0.5 h-5 w-5 flex-shrink-0 text-green-500" />
-                  <span>Interactive volume charts</span>
-                </li>
-                <li className="flex items-start">
-                  <MdBarChart className="mr-3 mt-0.5 h-5 w-5 flex-shrink-0 text-green-500" />
-                  <span>Buy/sell pressure analysis</span>
-                </li>
-                <li className="flex items-start">
-                  <MdTimer className="mr-3 mt-0.5 h-5 w-5 flex-shrink-0 text-green-500" />
-                  <span>Multiple timeframe views</span>
-                </li>
-              </ul>
-            </div>
-
-            <div className="rounded-2xl border border-purple-500/10 bg-gradient-to-br from-purple-500/5 to-purple-700/5 p-6">
-              <h4 className="mb-6 flex items-center text-xl font-semibold text-purple-400">
-                <MdTrackChanges className="mr-2 h-6 w-6" />
-                Analysis
-              </h4>
-              <ul className="space-y-4 text-gray-400">
-                <li className="flex items-start">
-                  <MdStorage className="mr-3 mt-0.5 h-5 w-5 flex-shrink-0 text-purple-500" />
-                  <span>Historical data browsing</span>
-                </li>
-                <li className="flex items-start">
-                  <MdFileDownload className="mr-3 mt-0.5 h-5 w-5 flex-shrink-0 text-purple-500" />
-                  <span>CSV data export</span>
-                </li>
-                <li className="flex items-start">
-                  <MdDataUsage className="mr-3 mt-0.5 h-5 w-5 flex-shrink-0 text-purple-500" />
-                  <span>Connection log tracking</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-12 flex items-center justify-center space-x-3 text-sm text-gray-500">
-          <span>Built with</span>
-          <span className="font-medium text-blue-400">Next.js</span>
-          <span>•</span>
-          <span className="font-medium text-cyan-400">Tailwind CSS</span>
-          <span>•</span>
-          <span className="font-medium text-green-400">SQLite</span>
         </div>
       </div>
-    </main>
+    </LayoutWrapper>
   );
 }

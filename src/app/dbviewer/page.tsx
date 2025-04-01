@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import Link from "next/link";
+import { LayoutWrapper } from "../components/layout-wrapper";
+import { MdDownload, MdStorage, MdTableView } from "react-icons/md";
 
 interface OrderbookEntry {
   id: number;
@@ -30,7 +32,7 @@ export default function DBViewer() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"orderbook" | "connections">(
-    "orderbook"
+    "orderbook",
   );
 
   useEffect(() => {
@@ -125,7 +127,7 @@ export default function DBViewer() {
     link.setAttribute("href", url);
     link.setAttribute(
       "download",
-      `${activeTab}_data_${new Date().toISOString().split("T")[0]}.csv`
+      `${activeTab}_data_${new Date().toISOString().split("T")[0]}.csv`,
     );
     link.style.visibility = "hidden";
     document.body.appendChild(link);
@@ -134,38 +136,39 @@ export default function DBViewer() {
   };
 
   return (
-    <div className="min-h-screen bg-[#060a10] text-white p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Database Viewer</h1>
-          <Link
-            href="/"
-            className="px-4 py-2 bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
-          >
-            Back to Dashboard
-          </Link>
+    <LayoutWrapper>
+      <div className="container py-8 md:py-12">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+            Database Viewer
+          </h1>
+          <p className="text-muted-foreground mt-2 text-lg">
+            Browse and export collected market data
+          </p>
         </div>
 
-        <div className="flex justify-between mb-4">
-          <div className="flex gap-4">
+        <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div className="flex gap-2">
             <button
-              className={`px-4 py-2 rounded-md ${
+              className={`inline-flex items-center rounded-md px-4 py-2 text-sm font-medium ${
                 activeTab === "orderbook"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-700 text-gray-300"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
               }`}
               onClick={() => setActiveTab("orderbook")}
             >
+              <MdTableView className="mr-2 h-4 w-4" />
               Orderbook Data
             </button>
             <button
-              className={`px-4 py-2 rounded-md ${
+              className={`inline-flex items-center rounded-md px-4 py-2 text-sm font-medium ${
                 activeTab === "connections"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-700 text-gray-300"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
               }`}
               onClick={() => setActiveTab("connections")}
             >
+              <MdStorage className="mr-2 h-4 w-4" />
               Connection Logs
             </button>
           </div>
@@ -179,118 +182,170 @@ export default function DBViewer() {
                 ? !orderbookData.length
                 : !connectionLogs.length)
             }
-            className={`px-4 py-2 bg-green-700 text-white rounded-md hover:bg-green-600 transition-colors ${
-              loading ||
-              error !== null ||
-              (activeTab === "orderbook"
-                ? !orderbookData.length
-                : !connectionLogs.length)
-                ? "opacity-50 cursor-not-allowed"
-                : ""
-            }`}
+            className="bg-success text-success-foreground hover:bg-success/90 focus:ring-success/20 inline-flex items-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
           >
+            <MdDownload className="mr-2 h-4 w-4" />
             Export to CSV
           </button>
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+          <div className="flex h-60 items-center justify-center">
+            <div className="flex flex-col items-center gap-2">
+              <div className="border-primary h-8 w-8 animate-spin rounded-full border-4 border-t-transparent"></div>
+              <span className="text-muted-foreground">Loading data...</span>
+            </div>
           </div>
         ) : error ? (
-          <div className="bg-red-900/50 border border-red-800 p-4 rounded-md">
+          <div className="bg-destructive/10 text-destructive rounded-md p-4">
             {error}
           </div>
         ) : (
-          <div className="bg-[#0f1217] rounded-lg shadow-lg border border-[#252830] overflow-hidden">
+          <div className="border-border/40 bg-card rounded-lg border shadow-sm">
             {activeTab === "orderbook" ? (
               <>
-                <h2 className="text-xl p-4 bg-[#161b24] border-b border-[#252830]">
-                  Orderbook Data ({orderbookData.length} entries)
-                </h2>
+                <div className="border-border/40 bg-muted/40 flex items-center justify-between border-b px-4 py-3">
+                  <h2 className="text-lg font-medium">
+                    Orderbook Data ({orderbookData.length} entries)
+                  </h2>
+                </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-[#252830]">
-                        <th className="p-3 text-left">ID</th>
-                        <th className="p-3 text-left">Symbol</th>
-                        <th className="p-3 text-left">Timestamp</th>
-                        <th className="p-3 text-left">Timeframe</th>
-                        <th className="p-3 text-left">Buy Volume</th>
-                        <th className="p-3 text-left">Sell Volume</th>
+                      <tr className="border-border/40 bg-muted/30 border-b">
+                        <th className="whitespace-nowrap p-3 text-left font-medium">
+                          ID
+                        </th>
+                        <th className="whitespace-nowrap p-3 text-left font-medium">
+                          Symbol
+                        </th>
+                        <th className="whitespace-nowrap p-3 text-left font-medium">
+                          Timestamp
+                        </th>
+                        <th className="whitespace-nowrap p-3 text-left font-medium">
+                          Timeframe
+                        </th>
+                        <th className="whitespace-nowrap p-3 text-left font-medium">
+                          Buy Volume
+                        </th>
+                        <th className="whitespace-nowrap p-3 text-left font-medium">
+                          Sell Volume
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {orderbookData.map((entry) => (
-                        <tr
-                          key={entry.id}
-                          className="border-b border-[#1a1d25] hover:bg-[#171c25]"
-                        >
-                          <td className="p-3">{entry.id}</td>
-                          <td className="p-3 uppercase">{entry.symbol}</td>
-                          <td className="p-3">
-                            {formatTimestamp(entry.timestamp)}
-                          </td>
-                          <td className="p-3">{entry.timeframe}</td>
-                          <td className="p-3 text-[#0190FF]">
-                            {formatVolume(entry.buy_volume)}
-                          </td>
-                          <td className="p-3 text-[#FF3B69]">
-                            {formatVolume(entry.sell_volume)}
+                      {orderbookData.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={6}
+                            className="text-muted-foreground p-4 text-center"
+                          >
+                            No orderbook data available
                           </td>
                         </tr>
-                      ))}
+                      ) : (
+                        orderbookData.map((entry) => (
+                          <tr
+                            key={entry.id}
+                            className="border-border/20 hover:bg-muted/20 border-b"
+                          >
+                            <td className="whitespace-nowrap p-3">
+                              {entry.id}
+                            </td>
+                            <td className="whitespace-nowrap p-3 uppercase">
+                              {entry.symbol}
+                            </td>
+                            <td className="whitespace-nowrap p-3">
+                              {formatTimestamp(entry.timestamp)}
+                            </td>
+                            <td className="whitespace-nowrap p-3">
+                              {entry.timeframe}
+                            </td>
+                            <td className="text-primary whitespace-nowrap p-3">
+                              {formatVolume(entry.buy_volume)}
+                            </td>
+                            <td className="text-destructive whitespace-nowrap p-3">
+                              {formatVolume(entry.sell_volume)}
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
               </>
             ) : (
               <>
-                <h2 className="text-xl p-4 bg-[#161b24] border-b border-[#252830]">
-                  Connection Logs ({connectionLogs.length} entries)
-                </h2>
+                <div className="border-border/40 bg-muted/40 flex items-center justify-between border-b px-4 py-3">
+                  <h2 className="text-lg font-medium">
+                    Connection Logs ({connectionLogs.length} entries)
+                  </h2>
+                </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-[#252830]">
-                        <th className="p-3 text-left">ID</th>
-                        <th className="p-3 text-left">Symbol</th>
-                        <th className="p-3 text-left">Timestamp</th>
-                        <th className="p-3 text-left">Event</th>
-                        <th className="p-3 text-left">Details</th>
+                      <tr className="border-border/40 bg-muted/30 border-b">
+                        <th className="whitespace-nowrap p-3 text-left font-medium">
+                          ID
+                        </th>
+                        <th className="whitespace-nowrap p-3 text-left font-medium">
+                          Timestamp
+                        </th>
+                        <th className="whitespace-nowrap p-3 text-left font-medium">
+                          Symbol
+                        </th>
+                        <th className="whitespace-nowrap p-3 text-left font-medium">
+                          Event
+                        </th>
+                        <th className="whitespace-nowrap p-3 text-left font-medium">
+                          Details
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {connectionLogs.map((log) => (
-                        <tr
-                          key={log.id}
-                          className="border-b border-[#1a1d25] hover:bg-[#171c25]"
-                        >
-                          <td className="p-3">{log.id}</td>
-                          <td className="p-3 uppercase">{log.symbol}</td>
-                          <td className="p-3">
-                            {formatTimestamp(log.timestamp)}
-                          </td>
-                          <td className="p-3">
-                            <span
-                              className={`inline-block px-2 py-1 rounded-full text-xs ${
-                                log.event === "connect"
-                                  ? "bg-green-900 text-green-300"
-                                  : log.event === "disconnect"
-                                  ? "bg-red-900 text-red-300"
-                                  : log.event === "error"
-                                  ? "bg-orange-900 text-orange-300"
-                                  : "bg-blue-900 text-blue-300"
-                              }`}
-                            >
-                              {log.event}
-                            </span>
-                          </td>
-                          <td className="p-3 text-gray-400 max-w-sm truncate">
-                            {log.details || "-"}
+                      {connectionLogs.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={5}
+                            className="text-muted-foreground p-4 text-center"
+                          >
+                            No connection logs available
                           </td>
                         </tr>
-                      ))}
+                      ) : (
+                        connectionLogs.map((log) => (
+                          <tr
+                            key={log.id}
+                            className="border-border/20 hover:bg-muted/20 border-b"
+                          >
+                            <td className="whitespace-nowrap p-3">{log.id}</td>
+                            <td className="whitespace-nowrap p-3">
+                              {formatTimestamp(log.timestamp)}
+                            </td>
+                            <td className="whitespace-nowrap p-3 uppercase">
+                              {log.symbol}
+                            </td>
+                            <td className="whitespace-nowrap p-3">
+                              <span
+                                className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
+                                  log.event.includes("error") ||
+                                  log.event.includes("disconnect")
+                                    ? "bg-destructive/10 text-destructive"
+                                    : log.event.includes("connect") ||
+                                        log.event.includes("start")
+                                      ? "bg-success/10 text-success"
+                                      : "bg-muted text-muted-foreground"
+                                }`}
+                              >
+                                {log.event}
+                              </span>
+                            </td>
+                            <td className="text-muted-foreground p-3">
+                              {log.details || "-"}
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -299,6 +354,6 @@ export default function DBViewer() {
           </div>
         )}
       </div>
-    </div>
+    </LayoutWrapper>
   );
 }

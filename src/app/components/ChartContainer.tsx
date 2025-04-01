@@ -34,15 +34,18 @@ export default function ChartContainer() {
   }
 
   return (
-    <>
+    <div className="w-full space-y-4">
       <HistoricalDataSelector onDataLoad={setHistoricalData} />
 
       {/* Chart component */}
-      <div className="w-full bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 md:p-6">
+      <div className="bg-card border-border/40 w-full rounded-lg border p-4 shadow-sm md:p-6">
         <Suspense
           fallback={
-            <div className="w-full h-[500px] flex items-center justify-center">
-              Loading chart...
+            <div className="text-muted-foreground flex h-[500px] w-full items-center justify-center">
+              <div className="flex flex-col items-center gap-2">
+                <div className="border-primary h-8 w-8 animate-spin rounded-full border-4 border-t-transparent"></div>
+                <span>Loading chart...</span>
+              </div>
             </div>
           }
         >
@@ -50,6 +53,6 @@ export default function ChartContainer() {
           <BinanceVolumeChart />
         </Suspense>
       </div>
-    </>
+    </div>
   );
 }

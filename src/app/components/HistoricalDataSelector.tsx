@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import axios from "axios";
 import { OrderbookApiResponse } from "./ChartContainer";
 
@@ -8,229 +8,200 @@ interface HistoricalDataSelectorProps {
   onDataLoad: (data: OrderbookApiResponse) => void;
 }
 
-interface DataStats {
-  count: number;
-  symbol: string;
-  timeframe: string;
-}
-
 export default function HistoricalDataSelector({
   onDataLoad,
 }: HistoricalDataSelectorProps) {
-  const [symbols, setSymbols] = useState<string[]>([]);
-  const [selectedSymbol, setSelectedSymbol] = useState<string>("");
-  const [startDate, setStartDate] = useState<string>("");
-  const [endDate, setEndDate] = useState<string>("");
-  const [timeframe, setTimeframe] = useState<string>("1s");
-  const [loading, setLoading] = useState<boolean>(false);
+  const [symbol, setSymbol] = useState("BTCUSDT");
+  const [timeframe, setTimeframe] = useState("1m");
+  const [isLoading, setIsLoading] = useState(false);
+  const [startDate, setStartDate] = useState<string>(
+    new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
+  );
+  const [endDate, setEndDate] = useState<string>(
+    new Date().toISOString().slice(0, 16),
+  );
   const [error, setError] = useState<string | null>(null);
-  const [dataStats, setDataStats] = useState<DataStats | null>(null);
 
-  // Constants for styling
-  const cardBgColor = "bg-[#0f1217]";
-  const borderColor = "border-[#252830]";
-  const controlBgColor = "bg-[#161b24]";
-  const controlBorderColor = "border-[#252a36]";
-
-  // Available timeframes in seconds
-  const TIMEFRAMES = {
-    "1s": 1,
-    "5s": 5,
-    "15s": 15,
-    "30s": 30,
-    "1m": 60,
-    "5m": 300,
-    "15m": 900,
-    "30m": 1800,
-    "1h": 3600,
-  };
-
-  // Format date for input
-  const formatDateForInput = (date: Date): string => {
-    return date.toISOString().slice(0, 16);
-  };
-
-  // Initialize with default dates (last hour)
-  useEffect(() => {
-    const now = new Date();
-    const oneHourAgo = new Date(now);
-    oneHourAgo.setHours(now.getHours() - 1);
-
-    setStartDate(formatDateForInput(oneHourAgo));
-    setEndDate(formatDateForInput(now));
-
-    // Load available symbols
-    fetchSymbols();
-  }, []);
-
-  // Fetch available symbols from the database
-  const fetchSymbols = async () => {
-    try {
-      setLoading(true);
-      const response = await axios.get("/api/orderbook?action=symbols");
-      if (response.data.symbols && response.data.symbols.length > 0) {
-        setSymbols(response.data.symbols);
-        setSelectedSymbol(response.data.symbols[0]);
-      }
-      setError(null);
-    } catch (error) {
-      console.error("Error fetching symbols:", error);
-      setError("Failed to fetch available symbols");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Load historical data
-  const loadData = async () => {
-    if (!selectedSymbol || !startDate || !endDate) {
-      setError("Please select a symbol, start date, and end date");
+  const fetchHistoricalData = async () => {
+    if (!symbol || !timeframe || !startDate || !endDate) {
+      setError("Please fill in all fields");
       return;
     }
 
+    setIsLoading(true);
+    setError(null);
+
+    const startTimestamp = new Date(startDate).getTime();
+    const endTimestamp = new Date(endDate).getTime();
+
     try {
-      setLoading(true);
-      const startTimestamp = new Date(startDate).getTime();
-      const endTimestamp = new Date(endDate).getTime();
-
-      if (isNaN(startTimestamp) || isNaN(endTimestamp)) {
-        setError("Invalid date format");
-        return;
-      }
-
-      if (startTimestamp >= endTimestamp) {
-        setError("Start date must be before end date");
-        return;
-      }
-
-      const response = await axios.get<OrderbookApiResponse>("/api/orderbook", {
-        params: {
-          symbol: selectedSymbol,
-          startTime: startTimestamp,
-          endTime: endTimestamp,
-          timeframe,
-        },
-      });
+      const response = await axios.get(
+        `/api/historical?symbol=${symbol}&timeframe=${timeframe}&startTime=${startTimestamp}&endTime=${endTimestamp}`,
+      );
 
       if (response.data.success) {
         onDataLoad(response.data);
-        setDataStats({
-          count: response.data.count,
-          symbol: response.data.symbol,
-          timeframe: response.data.timeframe,
-        });
-        setError(null);
       } else {
         setError(response.data.message || "Failed to load data");
       }
-    } catch (error) {
-      console.error("Error loading historical data:", error);
-      setError("Failed to load historical data");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "An unknown error occurred",
+      );
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
+  const popularSymbols = [
+    "BTCUSDT",
+    "ETHUSDT",
+    "BNBUSDT",
+    "SOLUSDT",
+    "ADAUSDT",
+  ];
+
+  const timeframes = [
+    { value: "1m", label: "1 minute" },
+    { value: "5m", label: "5 minutes" },
+    { value: "15m", label: "15 minutes" },
+    { value: "1h", label: "1 hour" },
+    { value: "4h", label: "4 hours" },
+    { value: "1d", label: "1 day" },
+  ];
+
   return (
-    <div className={`w-full ${cardBgColor} rounded-lg shadow-md p-4 mb-6`}>
-      <h2 className="text-xl font-bold mb-4">Historical Data Viewer</h2>
+    <div className="border-border/40 bg-card rounded-lg border p-4 shadow-sm md:p-6">
+      <h2 className="mb-4 text-xl font-semibold tracking-tight">
+        Historical Data
+      </h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
-        {/* Symbol selector */}
-        <div>
-          <label className="block mb-1 text-sm font-medium">Symbol</label>
-          <select
-            value={selectedSymbol}
-            onChange={(e) => setSelectedSymbol(e.target.value)}
-            disabled={loading || symbols.length === 0}
-            className={`w-full p-2 rounded ${controlBgColor} ${controlBorderColor} border`}
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+        <div className="space-y-2">
+          <label
+            htmlFor="symbol"
+            className="block text-sm font-medium text-foreground"
           >
-            {symbols.length === 0 ? (
-              <option value="">No symbols available</option>
-            ) : (
-              symbols.map((symbol) => (
-                <option key={symbol} value={symbol}>
-                  {symbol.toUpperCase()}
-                </option>
-              ))
-            )}
-          </select>
-        </div>
-
-        {/* Start date */}
-        <div>
-          <label className="block mb-1 text-sm font-medium">Start Date</label>
-          <input
-            type="datetime-local"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            disabled={loading}
-            className={`w-full p-2 rounded ${controlBgColor} ${controlBorderColor} border`}
-          />
-        </div>
-
-        {/* End date */}
-        <div>
-          <label className="block mb-1 text-sm font-medium">End Date</label>
-          <input
-            type="datetime-local"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            disabled={loading}
-            className={`w-full p-2 rounded ${controlBgColor} ${controlBorderColor} border`}
-          />
-        </div>
-
-        {/* Timeframe */}
-        <div>
-          <label className="block mb-1 text-sm font-medium">Timeframe</label>
+            Symbol
+          </label>
           <select
+            id="symbol"
+            value={symbol}
+            onChange={(e) => setSymbol(e.target.value)}
+            className="border-input focus:border-primary focus:ring-primary w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1"
+          >
+            {popularSymbols.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+            <option value="custom">Custom...</option>
+          </select>
+          {symbol === "custom" && (
+            <input
+              type="text"
+              placeholder="Enter symbol (e.g. DOGEUSDT)"
+              onChange={(e) => setSymbol(e.target.value)}
+              className="border-input focus:border-primary focus:ring-primary w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1"
+            />
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <label
+            htmlFor="timeframe"
+            className="block text-sm font-medium text-foreground"
+          >
+            Timeframe
+          </label>
+          <select
+            id="timeframe"
             value={timeframe}
             onChange={(e) => setTimeframe(e.target.value)}
-            disabled={loading}
-            className={`w-full p-2 rounded ${controlBgColor} ${controlBorderColor} border`}
+            className="border-input focus:border-primary focus:ring-primary w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1"
           >
-            {Object.keys(TIMEFRAMES).map((tf) => (
-              <option key={tf} value={tf}>
-                {tf}
+            {timeframes.map((tf) => (
+              <option key={tf.value} value={tf.value}>
+                {tf.label}
               </option>
             ))}
           </select>
         </div>
 
-        {/* Load button */}
-        <div className="flex items-end">
-          <button
-            onClick={loadData}
-            disabled={loading || !selectedSymbol}
-            className={`w-full p-2 rounded font-medium transition-colors ${
-              loading ? "bg-gray-600" : "bg-blue-600 hover:bg-blue-700"
-            }`}
+        <div className="space-y-2">
+          <label
+            htmlFor="startDate"
+            className="block text-sm font-medium text-foreground"
           >
-            {loading ? "Loading..." : "Load Data"}
-          </button>
+            Start Date & Time
+          </label>
+          <input
+            id="startDate"
+            type="datetime-local"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="border-input focus:border-primary focus:ring-primary w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label
+            htmlFor="endDate"
+            className="block text-sm font-medium text-foreground"
+          >
+            End Date & Time
+          </label>
+          <input
+            id="endDate"
+            type="datetime-local"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="border-input focus:border-primary focus:ring-primary w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1"
+          />
         </div>
       </div>
 
-      {/* Error display */}
       {error && (
-        <div className="p-3 mb-4 bg-red-900/50 border border-red-800 rounded">
+        <div className="bg-destructive/10 text-destructive mt-4 rounded-md p-3 text-sm">
           {error}
         </div>
       )}
 
-      {/* Stats display */}
-      {dataStats && (
-        <div
-          className={`p-3 ${controlBgColor} rounded border ${borderColor} text-sm`}
+      <div className="mt-6 flex justify-end">
+        <button
+          onClick={fetchHistoricalData}
+          disabled={isLoading}
+          className="bg-primary text-primary-foreground hover:bg-primary/90 focus:ring-primary/30 inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium shadow transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50"
         >
-          <p>
-            Loaded <strong>{dataStats.count.toLocaleString()}</strong> data
-            points for <strong>{dataStats.symbol.toUpperCase()}</strong> with
-            timeframe <strong>{dataStats.timeframe}</strong>
-          </p>
-        </div>
-      )}
+          {isLoading ? (
+            <>
+              <svg
+                className="mr-2 h-4 w-4 animate-spin"
+                fill="none"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  fill="currentColor"
+                ></path>
+              </svg>
+              Loading...
+            </>
+          ) : (
+            "Load Data"
+          )}
+        </button>
+      </div>
     </div>
   );
 }
