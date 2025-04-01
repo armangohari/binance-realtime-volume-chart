@@ -246,26 +246,42 @@ export default function BinanceVolumeChart() {
 
   // Define reconnect function with the latest timeframe from closure
   const reconnectWithCurrentTimeframe = () => {
+    // Calculate backoff time, starting from 1 second and increasing exponentially
+    // Capped at 30 seconds
+    const backoffTime = Math.min(1000 * Math.pow(1.5, reconnectCount), 30000);
+    console.log(
+      `Scheduling reconnect attempt in ${backoffTime}ms (attempt #${
+        reconnectCount + 1
+      })`,
+    );
+
+    // Clear any existing timeout
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
     }
 
-    // Increase backoff time with each attempt, but cap at 30 seconds
-    const backoffTime = Math.min(Math.pow(2, reconnectCount) * 1000, 30000);
+    // Close any existing WebSocket
+    if (wsRef.current) {
+      try {
+        // Only close if readyState is not already CLOSED or CLOSING
+        if (wsRef.current.readyState !== 3 && wsRef.current.readyState !== 2) {
+          console.log("Closing existing WebSocket before reconnect...");
+          const ws = wsRef.current;
+          wsRef.current = null;
+          ws.close(1000, "Reconnecting");
+        } else {
+          wsRef.current = null;
+        }
+      } catch (err) {
+        console.error("Error closing WebSocket during reconnect:", err);
+        wsRef.current = null;
+      }
+    }
 
     reconnectTimeoutRef.current = setTimeout(() => {
       setReconnectCount((prev) => prev + 1);
       setLastUpdate(`Reconnecting (attempt ${reconnectCount + 1})...`);
-
-      // Close previous connection if it exists
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
-      }
-
-      console.log(
-        `Reconnecting with timeframe: ${currentTimeframeRef.current}`,
-      );
 
       // Reset data map on reconnection
       dataMapRef.current = new Map<number, VolumeData>();
@@ -379,10 +395,28 @@ export default function BinanceVolumeChart() {
     if (!totalVolumeChartComponents.current || !pressureChartComponents.current)
       return;
 
-    // Close existing WS connection
+    // Clear any existing reconnect timeout
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+
+    // Close existing WS connection properly
     if (wsRef.current) {
-      wsRef.current.close();
+      // Use a local variable to avoid race conditions
+      const ws = wsRef.current;
+      // Set to null first to prevent multiple closes
       wsRef.current = null;
+
+      try {
+        // Only close if readyState is not already CLOSED (3) or CLOSING (2)
+        if (ws.readyState !== 3 && ws.readyState !== 2) {
+          console.log(`Closing existing WebSocket connection for ${symbol}...`);
+          ws.close(1000, "Timeframe changed");
+        }
+      } catch (err) {
+        console.error("Error closing WebSocket:", err);
+      }
     }
 
     // Reset data map for new connection
@@ -395,110 +429,115 @@ export default function BinanceVolumeChart() {
       `Timeframe changed to ${selectedTimeframe}, reset data and reconnecting...`,
     );
 
-    try {
-      // Create WebSocket connection using the safer method
-      const ws = createBinanceWebSocket(
-        symbol,
-        // onOpen
-        () => {
-          console.log("Connected to Binance WebSocket");
-          setConnected(true);
-          setLastUpdate("Connected to Binance WebSocket");
-          setReconnectCount(0); // Reset reconnect count on successful connection
-        },
-        // onClose
-        (event) => {
-          console.log("Disconnected from Binance WebSocket", event);
-          setConnected(false);
-          setLastUpdate(
-            `Disconnected from Binance WebSocket: ${
-              event.reason || "Unknown reason"
-            }`,
-          );
+    // Add a small delay before reconnecting to ensure proper cleanup
+    setTimeout(() => {
+      try {
+        // Create WebSocket connection using the safer method
+        const ws = createBinanceWebSocket(
+          symbol,
+          // onOpen
+          () => {
+            console.log("Connected to Binance WebSocket");
+            setConnected(true);
+            setLastUpdate("Connected to Binance WebSocket");
+            setReconnectCount(0); // Reset reconnect count on successful connection
+          },
+          // onClose
+          (event) => {
+            console.log("Disconnected from Binance WebSocket", event);
+            setConnected(false);
+            setLastUpdate(
+              `Disconnected from Binance WebSocket: ${
+                event.reason || "Unknown reason"
+              }`,
+            );
 
-          // Only attempt to reconnect if this wasn't a normal closure
-          if (event.code !== 1000) {
-            reconnectWithCurrentTimeframe();
-          }
-        },
-        // onError
-        (error) => {
-          console.error("WebSocket error:", error);
-          setLastUpdate(`WebSocket error: ${new Date().toLocaleTimeString()}`);
-          // Error will trigger the onclose handler which will handle reconnection
-        },
-        // onMessage
-        (event) => {
-          try {
-            const data = JSON.parse(event.data) as BinanceDepthUpdate;
-
-            // Process orderbook data
-            if (data.b && data.a) {
-              // Bids and asks
-              // Get current timestamp and round it to the current timeframe
-              const now = Date.now();
-              // Use the ref to access the current timeframe value
-              const currentTimeFrameMs =
-                TIMEFRAMES[
-                  currentTimeframeRef.current as keyof typeof TIMEFRAMES
-                ] * 1000;
-              const timeframeTimestamp =
-                Math.floor(now / currentTimeFrameMs) * currentTimeFrameMs;
-
-              // Process the depth data
-              const { buyVolume, sellVolume } = processDepthData(data);
-
-              // Update the data map
-              const dataMap = dataMapRef.current;
-
-              // If we have data for this timeframe already, update it
-              if (dataMap.has(timeframeTimestamp)) {
-                const existing = dataMap.get(timeframeTimestamp)!;
-                dataMap.set(timeframeTimestamp, {
-                  time: timeframeTimestamp,
-                  buyVolume: existing.buyVolume + buyVolume,
-                  sellVolume: existing.sellVolume + sellVolume,
-                });
-              } else {
-                // Otherwise create a new entry
-                dataMap.set(timeframeTimestamp, {
-                  time: timeframeTimestamp,
-                  buyVolume,
-                  sellVolume,
-                });
-              }
-
-              // Update state with the latest data
-              const newData = Array.from(dataMap.values())
-                .sort((a, b) => a.time - b.time)
-                .slice(-100); // Keep last 100 bars for performance
-
-              console.log(
-                `WebSocket data processed: ${newData.length} bars, buy: ${buyVolume}, sell: ${sellVolume}`,
-              );
-              setVolumeData(newData);
-              setLastUpdate(
-                `Last update: ${formatTimestamp(now)} (${
-                  currentTimeframeRef.current
-                })`,
-              );
-
-              // Set loading to false once we have data
-              if (loading && newData.length > 0) {
-                setLoading(false);
-              }
+            // Only attempt to reconnect if this wasn't a normal closure
+            if (event.code !== 1000) {
+              reconnectWithCurrentTimeframe();
             }
-          } catch (error) {
-            console.error("Error processing WebSocket message:", error);
-          }
-        },
-      );
-      wsRef.current = ws;
-    } catch (error) {
-      console.error("Error creating WebSocket:", error);
-      // Try to reconnect
-      reconnectWithCurrentTimeframe();
-    }
+          },
+          // onError
+          (error) => {
+            console.error("WebSocket error:", error);
+            setLastUpdate(
+              `WebSocket error: ${new Date().toLocaleTimeString()}`,
+            );
+            // Error will trigger the onclose handler which will handle reconnection
+          },
+          // onMessage
+          (event) => {
+            try {
+              const data = JSON.parse(event.data) as BinanceDepthUpdate;
+
+              // Process orderbook data
+              if (data.b && data.a) {
+                // Bids and asks
+                // Get current timestamp and round it to the current timeframe
+                const now = Date.now();
+                // Use the ref to access the current timeframe value
+                const currentTimeFrameMs =
+                  TIMEFRAMES[
+                    currentTimeframeRef.current as keyof typeof TIMEFRAMES
+                  ] * 1000;
+                const timeframeTimestamp =
+                  Math.floor(now / currentTimeFrameMs) * currentTimeFrameMs;
+
+                // Process the depth data
+                const { buyVolume, sellVolume } = processDepthData(data);
+
+                // Update the data map
+                const dataMap = dataMapRef.current;
+
+                // If we have data for this timeframe already, update it
+                if (dataMap.has(timeframeTimestamp)) {
+                  const existing = dataMap.get(timeframeTimestamp)!;
+                  dataMap.set(timeframeTimestamp, {
+                    time: timeframeTimestamp,
+                    buyVolume: existing.buyVolume + buyVolume,
+                    sellVolume: existing.sellVolume + sellVolume,
+                  });
+                } else {
+                  // Otherwise create a new entry
+                  dataMap.set(timeframeTimestamp, {
+                    time: timeframeTimestamp,
+                    buyVolume,
+                    sellVolume,
+                  });
+                }
+
+                // Update state with the latest data
+                const newData = Array.from(dataMap.values())
+                  .sort((a, b) => a.time - b.time)
+                  .slice(-100); // Keep last 100 bars for performance
+
+                console.log(
+                  `WebSocket data processed: ${newData.length} bars, buy: ${buyVolume}, sell: ${sellVolume}`,
+                );
+                setVolumeData(newData);
+                setLastUpdate(
+                  `Last update: ${formatTimestamp(now)} (${
+                    currentTimeframeRef.current
+                  })`,
+                );
+
+                // Set loading to false once we have data
+                if (loading && newData.length > 0) {
+                  setLoading(false);
+                }
+              }
+            } catch (error) {
+              console.error("Error processing WebSocket message:", error);
+            }
+          },
+        );
+        wsRef.current = ws;
+      } catch (error) {
+        console.error("Error creating WebSocket:", error);
+        // Try to reconnect
+        reconnectWithCurrentTimeframe();
+      }
+    }, 0);
 
     return () => {
       if (reconnectTimeoutRef.current) {

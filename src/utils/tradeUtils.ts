@@ -90,6 +90,7 @@ export function createBinanceTradeWebSocket(
     }
 
     onClose(event);
+    return null; // Return null to avoid the undefined return value
   };
 
   ws.onerror = (event) => {
