@@ -30,7 +30,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const db = new Database(DB_PATH);
 
     let query = "";
-    let params: any[] = [];
+    const params: (string | number)[] = [];
 
     if (table === "orderbook") {
       query = `
@@ -76,7 +76,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
     // Get total count for pagination
     let countQuery = "";
-    let countParams: any[] = [];
+    const countParams: string[] = [];
 
     if (table === "orderbook") {
       countQuery = "SELECT COUNT(*) as count FROM orderbook_data WHERE 1=1";

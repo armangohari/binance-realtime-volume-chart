@@ -1,7 +1,8 @@
 "use client";
 
 // Trade update interval (in microseconds)
-const TRADE_UPDATE_SPEED = 100; // 100ms
+// Commented out as it's currently unused
+// const TRADE_UPDATE_SPEED = 100; // 100ms
 
 // ----- INTERFACES -----
 
