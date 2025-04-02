@@ -1,6 +1,6 @@
 "use client";
 
-import BinanceVolumeChart from "@/components/features/BinanceVolumeChart";
+import BinanceVolumeChart from "@/components/features/BinanceOrderbookVolumeChart";
 import { TradingViewPriceChart } from "@/components/features/TradingViewPriceChart";
 import { LayoutWrapper } from "@/components/ui/layout-wrapper";
 import Link from "next/link";

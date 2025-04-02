@@ -36,7 +36,7 @@ export default function Home() {
             </p>
             <div className="mt-8 flex justify-center gap-4">
               <Link
-                href="/realtime-volume"
+                href="/orderbook-volume"
                 className="bg-primary text-primary-foreground hover:bg-primary/90 focus:ring-primary/30 inline-flex items-center justify-center rounded-md px-5 py-2.5 text-sm font-medium shadow transition-colors focus:outline-none focus:ring-4"
               >
                 View Charts
@@ -48,7 +48,7 @@ export default function Home() {
           {/* Feature cards */}
           <div className="mt-24 grid gap-6 sm:grid-cols-2">
             <Link
-              href="/realtime-volume"
+              href="/orderbook-volume"
               className="border-border/40 bg-card hover:border-primary/50 group relative overflow-hidden rounded-lg border p-6 shadow-sm transition-all duration-200 hover:shadow-md"
             >
               <div className="bg-primary/10 text-primary mb-5 flex h-12 w-12 items-center justify-center rounded-md">
