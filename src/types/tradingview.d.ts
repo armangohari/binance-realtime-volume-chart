@@ -12,8 +12,13 @@ interface TradingViewWidget {
     enable_publishing?: boolean;
     allow_symbol_change?: boolean;
     save_image?: boolean;
-    studies?: string[];
-  }): any;
+    studies?: string[]; 
+    favorites?: {
+      intervals: string[];
+    };
+    hide_top_toolbar?: boolean;
+    hide_side_toolbar?: boolean;
+  }): Record<string, unknown>;
 }
 
 interface TradingView {

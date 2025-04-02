@@ -43,22 +43,6 @@ export function Footer() {
                   Trade Volume
                 </Link>
               </li>
-              <li>
-                <Link
-                  href="/data-collector"
-                  className="text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  Data Collector
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/dbviewer"
-                  className="text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  Database Viewer
-                </Link>
-              </li>
             </ul>
           </div>
           <div>
@@ -67,15 +51,14 @@ export function Footer() {
               <li className="text-muted-foreground">Real-time Monitoring</li>
               <li className="text-muted-foreground">Price Analysis</li>
               <li className="text-muted-foreground">Volume Tracking</li>
-              <li className="text-muted-foreground">Data Export</li>
               <li className="text-muted-foreground">Custom Timeframes</li>
             </ul>
           </div>
           <div>
             <h3 className="mb-4 text-sm font-medium">About</h3>
             <p className="text-muted-foreground max-w-xs text-sm">
-              This application collects and visualizes Binance orderbook data to
-              help traders identify volume patterns and market pressure.
+              This application visualizes Binance trading data to help traders
+              identify volume patterns and market pressure in real-time.
             </p>
           </div>
         </div>

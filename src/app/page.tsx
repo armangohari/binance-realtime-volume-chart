@@ -5,11 +5,8 @@ import {
   MdBarChart,
   MdBolt,
   MdDataUsage,
-  MdDownload,
-  MdFileDownload,
   MdQueryStats,
   MdShowChart,
-  MdStorage,
   MdTimer,
   MdTrackChanges,
 } from "react-icons/md";
@@ -45,17 +42,11 @@ export default function Home() {
                 View Charts
                 <MdArrowForward className="ml-2 h-4 w-4" />
               </Link>
-              <Link
-                href="/data-collector"
-                className="border-input hover:bg-accent hover:text-accent-foreground focus:ring-primary/30 inline-flex items-center justify-center rounded-md border bg-background px-5 py-2.5 text-sm font-medium shadow-sm focus:outline-none focus:ring-4"
-              >
-                Manage Collection
-              </Link>
             </div>
           </div>
 
           {/* Feature cards */}
-          <div className="mt-24 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-24 grid gap-6 sm:grid-cols-2">
             <Link
               href="/realtime-volume"
               className="border-border/40 bg-card hover:border-primary/50 group relative overflow-hidden rounded-lg border p-6 shadow-sm transition-all duration-200 hover:shadow-md"
@@ -95,46 +86,6 @@ export default function Home() {
                 <MdArrowForward className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
               </span>
             </Link>
-
-            <Link
-              href="/data-collector"
-              className="border-border/40 bg-card hover:border-primary/50 group relative overflow-hidden rounded-lg border p-6 shadow-sm transition-all duration-200 hover:shadow-md"
-            >
-              <div className="bg-primary/10 text-primary mb-5 flex h-12 w-12 items-center justify-center rounded-md">
-                <MdDownload className="h-6 w-6" />
-              </div>
-              <h2 className="mb-2 text-xl font-semibold tracking-tight">
-                Data Collector
-              </h2>
-              <p className="text-muted-foreground">
-                Monitor and control the data collection process that stores
-                market data in the database.
-              </p>
-              <span className="text-primary mt-4 inline-flex items-center text-sm font-medium">
-                Manage Collection
-                <MdArrowForward className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </span>
-            </Link>
-
-            <Link
-              href="/dbviewer"
-              className="border-border/40 bg-card hover:border-primary/50 group relative overflow-hidden rounded-lg border p-6 shadow-sm transition-all duration-200 hover:shadow-md"
-            >
-              <div className="bg-primary/10 text-primary mb-5 flex h-12 w-12 items-center justify-center rounded-md">
-                <MdStorage className="h-6 w-6" />
-              </div>
-              <h2 className="mb-2 text-xl font-semibold tracking-tight">
-                Database Viewer
-              </h2>
-              <p className="text-muted-foreground">
-                Explore and analyze the collected market data with table views
-                and export options.
-              </p>
-              <span className="text-primary mt-4 inline-flex items-center text-sm font-medium">
-                Explore Data
-                <MdArrowForward className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </span>
-            </Link>
           </div>
 
           {/* About section */}
@@ -143,17 +94,15 @@ export default function Home() {
               About This Project
             </h2>
             <p className="text-muted-foreground mb-10 text-center text-lg">
-              This application collects and visualizes Binance orderbook data to
-              help traders identify volume patterns and market pressure. The
-              data collector runs in the background, saving data to a local
-              SQLite database for historical analysis.
+              This application visualizes Binance trading data to help traders
+              identify volume patterns and market pressure in real-time.
             </p>
 
-            <div className="grid gap-6 sm:grid-cols-3">
+            <div className="grid gap-6 sm:grid-cols-2">
               <div className="border-border/40 bg-card/50 rounded-lg border p-6">
                 <h3 className="mb-4 flex items-center text-lg font-medium text-foreground">
                   <MdBolt className="text-primary mr-2 h-5 w-5" />
-                  Data Collection
+                  Data Streaming
                 </h3>
                 <ul className="text-muted-foreground space-y-3 text-sm">
                   <li className="flex items-start">
@@ -162,11 +111,11 @@ export default function Home() {
                   </li>
                   <li className="flex items-start">
                     <MdBarChart className="text-primary mr-2 mt-0.5 h-4 w-4 flex-shrink-0" />
-                    <span>Real-time orderbook processing</span>
+                    <span>Real-time trading data</span>
                   </li>
                   <li className="flex items-start">
                     <MdTimer className="text-primary mr-2 mt-0.5 h-4 w-4 flex-shrink-0" />
-                    <span>Data aggregation by timeframe</span>
+                    <span>Multiple timeframe options</span>
                   </li>
                 </ul>
               </div>
@@ -188,27 +137,6 @@ export default function Home() {
                   <li className="flex items-start">
                     <MdTimer className="text-primary mr-2 mt-0.5 h-4 w-4 flex-shrink-0" />
                     <span>Multiple timeframe views</span>
-                  </li>
-                </ul>
-              </div>
-
-              <div className="border-border/40 bg-card/50 rounded-lg border p-6">
-                <h3 className="mb-4 flex items-center text-lg font-medium text-foreground">
-                  <MdTrackChanges className="text-primary mr-2 h-5 w-5" />
-                  Analysis
-                </h3>
-                <ul className="text-muted-foreground space-y-3 text-sm">
-                  <li className="flex items-start">
-                    <MdStorage className="text-primary mr-2 mt-0.5 h-4 w-4 flex-shrink-0" />
-                    <span>Historical data browsing</span>
-                  </li>
-                  <li className="flex items-start">
-                    <MdFileDownload className="text-primary mr-2 mt-0.5 h-4 w-4 flex-shrink-0" />
-                    <span>CSV data export</span>
-                  </li>
-                  <li className="flex items-start">
-                    <MdDataUsage className="text-primary mr-2 mt-0.5 h-4 w-4 flex-shrink-0" />
-                    <span>Connection log tracking</span>
                   </li>
                 </ul>
               </div>

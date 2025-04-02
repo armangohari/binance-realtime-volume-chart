@@ -2,35 +2,6 @@
 
 import { useEffect, useRef } from "react";
 
-interface TradingViewConfig {
-  container_id: string;
-  symbol: string;
-  theme?: string;
-  locale?: string;
-  autosize?: boolean;
-  interval?: string;
-  timezone?: string;
-  style?: string;
-  toolbar_bg?: string;
-  enable_publishing?: boolean;
-  allow_symbol_change?: boolean;
-  save_image?: boolean;
-  studies?: string[];
-  favorites?: {
-    intervals: string[];
-  };
-  hide_top_toolbar?: boolean;
-  hide_side_toolbar?: boolean;
-}
-
-declare global {
-  interface Window {
-    TradingView: {
-      widget: new (config: TradingViewConfig) => void;
-    };
-  }
-}
-
 interface TradingViewPriceChartProps {
   symbol: string;
   timeframe?: string;

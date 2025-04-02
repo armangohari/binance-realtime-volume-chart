@@ -8,11 +8,9 @@ import { useState } from "react";
 import {
   MdBarChart,
   MdClose,
-  MdDownload,
   MdHome,
   MdMenu,
   MdShowChart,
-  MdStorage,
 } from "react-icons/md";
 
 const mainNav = [
@@ -23,23 +21,13 @@ const mainNav = [
   },
   {
     name: "Orderbook Volume",
-    href: "/realtime-volume",
+    href: "/orderbook-volume",
     icon: <MdShowChart className="h-5 w-5" />,
   },
   {
     name: "Trade Volume",
     href: "/trade-volume",
     icon: <MdBarChart className="h-5 w-5" />,
-  },
-  {
-    name: "Data Collector",
-    href: "/data-collector",
-    icon: <MdDownload className="h-5 w-5" />,
-  },
-  {
-    name: "DB Viewer",
-    href: "/dbviewer",
-    icon: <MdStorage className="h-5 w-5" />,
   },
 ];
 
