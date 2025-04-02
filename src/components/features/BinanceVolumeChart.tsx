@@ -16,19 +16,12 @@ import {
   createChart,
 } from "lightweight-charts";
 import { useEffect, useRef, useState } from "react";
-
-// Timeframe options in seconds
-const TIMEFRAMES = {
-  "1s": 1,
-  "5s": 5,
-  "15s": 15,
-  "30s": 30,
-  "1m": 60,
-  "5m": 300,
-  "15m": 900,
-  "30m": 1800,
-  "1h": 3600,
-};
+import {
+  COMMON_BINANCE_PAIRS,
+  TIMEFRAMES,
+  formatPairName,
+} from "@/constants/binancePairs";
+import { TradingViewPriceChart } from "./TradingViewPriceChart";
 
 // Define interfaces for our chart references
 interface TotalVolumeChart {
@@ -41,23 +34,65 @@ interface PressureChart {
   series: ISeriesApi<"Histogram">;
 }
 
-export default function BinanceVolumeChart() {
+interface BinanceVolumeChartProps {
+  symbol?: string;
+  timeframe?: string;
+  onSymbolChange?: (symbol: string) => void;
+  onTimeframeChange?: (timeframe: string) => void;
+  showPriceChart?: boolean;
+}
+
+export default function BinanceVolumeChart({
+  symbol: externalSymbol = "btcusdt",
+  timeframe: externalTimeframe = "1m",
+  onSymbolChange,
+  onTimeframeChange,
+  showPriceChart = false,
+}: BinanceVolumeChartProps) {
   const totalVolumeChartRef = useRef<HTMLDivElement>(null);
   const pressureChartRef = useRef<HTMLDivElement>(null);
   const totalVolumeChartComponents = useRef<TotalVolumeChart | null>(null);
   const pressureChartComponents = useRef<PressureChart | null>(null);
   const [volumeData, setVolumeData] = useState<VolumeData[]>([]);
-  const [symbol, setSymbol] = useState<string>("btcusdt");
-  const [selectedTimeframe, setSelectedTimeframe] = useState<string>("1s");
+  const [selectedSymbol, setSelectedSymbol] = useState<string>(externalSymbol);
+  const [selectedTimeframe, setSelectedTimeframe] =
+    useState<string>(externalTimeframe);
   const [lastUpdate, setLastUpdate] = useState<string>("Loading data...");
   const [loading, setLoading] = useState<boolean>(true);
   const [connected, setConnected] = useState<boolean>(false);
-  const currentTimeframeRef = useRef<string>("1s");
+  const currentTimeframeRef = useRef<string>(externalTimeframe);
   const dataMapRef = useRef(new Map<number, VolumeData>());
   const wsRef = useRef<WebSocket | null>(null);
   const [reconnectCount, setReconnectCount] = useState<number>(0);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isMountedRef = useRef<boolean>(true);
+
+  // Update internal state when props change
+  useEffect(() => {
+    if (externalSymbol !== selectedSymbol) {
+      setSelectedSymbol(externalSymbol);
+    }
+    if (externalTimeframe !== selectedTimeframe) {
+      setSelectedTimeframe(externalTimeframe);
+      currentTimeframeRef.current = externalTimeframe;
+    }
+  }, [externalSymbol, externalTimeframe, selectedSymbol, selectedTimeframe]);
+
+  // Function to handle symbol change
+  const handleSymbolChange = (newSymbol: string) => {
+    setSelectedSymbol(newSymbol);
+    if (onSymbolChange) {
+      onSymbolChange(newSymbol);
+    }
+  };
+
+  // Function to handle timeframe change
+  const handleTimeframeChange = (newTimeframe: string) => {
+    setSelectedTimeframe(newTimeframe);
+    if (onTimeframeChange) {
+      onTimeframeChange(newTimeframe);
+    }
+  };
 
   // Create the chart theme
   const getChartTheme = () => {
@@ -70,7 +105,6 @@ export default function BinanceVolumeChart() {
   };
 
   // Constants for styling
-  const bgColor = "bg-[#060a10]";
   const cardBgColor = "bg-[#0f1217]";
   const borderColor = "border-[#252830]";
   const controlBgColor = "bg-[#161b24]";
@@ -302,7 +336,7 @@ export default function BinanceVolumeChart() {
       try {
         // Create a new WebSocket connection using our safer method
         const newWs = createBinanceWebSocket(
-          symbol,
+          selectedSymbol,
           // onOpen
           () => {
             // Check if component is still mounted before updating state
@@ -442,8 +476,10 @@ export default function BinanceVolumeChart() {
       try {
         // Only close if readyState is not already CLOSED (3) or CLOSING (2)
         if (ws.readyState !== 3 && ws.readyState !== 2) {
-          console.log(`Closing existing WebSocket connection for ${symbol}...`);
-          ws.close(1000, "Timeframe changed");
+          console.log(
+            `Closing existing WebSocket connection for ${selectedSymbol}...`,
+          );
+          ws.close(1000, "Symbol or timeframe changed");
         }
       } catch (err) {
         console.error("Error closing WebSocket:", err);
@@ -453,11 +489,12 @@ export default function BinanceVolumeChart() {
     // Reset data map for new connection
     dataMapRef.current = new Map<number, VolumeData>();
 
-    // Clear existing volume data when timeframe changes
+    // Clear existing volume data when symbol or timeframe changes
     setVolumeData([]);
+    setLoading(true);
 
     console.log(
-      `Timeframe changed to ${selectedTimeframe}, reset data and reconnecting...`,
+      `Symbol changed to ${selectedSymbol} with timeframe ${selectedTimeframe}, reset data and reconnecting...`,
     );
 
     // Add a small delay before reconnecting to ensure proper cleanup
@@ -471,7 +508,7 @@ export default function BinanceVolumeChart() {
       try {
         // Create WebSocket connection using the safer method
         const ws = createBinanceWebSocket(
-          symbol,
+          selectedSymbol,
           // onOpen
           () => {
             if (!isMountedRef.current) return;
@@ -617,7 +654,7 @@ export default function BinanceVolumeChart() {
         wsRef.current = null;
       }
     };
-  }, [symbol, selectedTimeframe]);
+  }, [selectedSymbol, selectedTimeframe]);
 
   // Update the ref whenever selectedTimeframe changes
   useEffect(() => {
@@ -723,72 +760,103 @@ export default function BinanceVolumeChart() {
   }, []);
 
   return (
-    <div
-      className={`flex w-full flex-col ${bgColor} min-h-screen p-5 text-slate-100`}
-    >
-      {/* Header Section */}
-      <div className="mb-5">
-        <h1 className="mb-1.5 text-xl font-bold">Binance Volume Analysis</h1>
-        <p className="text-sm text-slate-400">
-          Real-time order book volume visualization
+    <div className="flex w-full flex-col">
+      {/* Header and Description (only if not in a container) */}
+      <div className="mb-3 md:mb-5">
+        <h1 className="mb-1 text-lg font-bold md:text-xl">
+          Binance Orderbook Volume Analysis
+        </h1>
+        <p className="text-xs text-slate-400 md:text-sm">
+          Real-time orderbook depth visualization
         </p>
       </div>
 
       {/* Controls Section */}
       <div
-        className={`${cardBgColor} mb-5 rounded-xl p-4 shadow-lg ${borderColor} border`}
+        className={`${cardBgColor} mb-3 rounded-xl p-2 shadow-lg md:mb-5 md:p-4 ${borderColor} border`}
       >
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 md:gap-3">
+          <div className="flex flex-wrap items-center gap-2 md:gap-3">
+            {/* Trading Pair Selector */}
             <div>
               <label
                 htmlFor="symbol-select"
-                className="mb-1.5 block text-sm font-medium text-slate-300"
+                className="mb-1 block text-xs font-medium text-slate-300 md:text-sm"
               >
                 Trading Pair
               </label>
-              <select
-                id="symbol-select"
-                value={symbol}
-                onChange={(e) => setSymbol(e.target.value.toLowerCase())}
-                className={`${controlBgColor} ${controlBorderColor} w-32 rounded-md border px-3 py-2 text-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                disabled={loading}
-              >
-                <option value="btcusdt">BTC/USDT</option>
-                <option value="ethusdt">ETH/USDT</option>
-                <option value="bnbusdt">BNB/USDT</option>
-                <option value="solusdt">SOL/USDT</option>
-                <option value="xrpusdt">XRP/USDT</option>
-                <option value="dogeusdt">DOGE/USDT</option>
-              </select>
+              <div className="relative inline-block">
+                <select
+                  id="symbol-select"
+                  value={selectedSymbol}
+                  onChange={(e) => handleSymbolChange(e.target.value)}
+                  className={`${controlBgColor} ${controlBorderColor} w-28 appearance-none rounded-md border px-3 py-2 pr-8 text-sm font-medium uppercase text-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 md:w-36 md:text-base`}
+                  disabled={loading && !connected}
+                >
+                  {COMMON_BINANCE_PAIRS.map((pair) => (
+                    <option key={pair} value={pair}>
+                      {formatPairName(pair)}
+                    </option>
+                  ))}
+                </select>
+                <div className="pointer-events-none absolute right-0 top-0 flex h-full items-center pr-2 text-slate-400">
+                  <svg
+                    className="h-4 w-4 fill-current"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+              </div>
             </div>
 
+            {/* Timeframe Selector */}
             <div>
               <label
                 htmlFor="timeframe-select"
-                className="mb-1.5 block text-sm font-medium text-slate-300"
+                className="mb-1 block text-xs font-medium text-slate-300 md:text-sm"
               >
                 Timeframe
               </label>
-              <select
-                id="timeframe-select"
-                value={selectedTimeframe}
-                onChange={(e) => setSelectedTimeframe(e.target.value)}
-                className={`${controlBgColor} ${controlBorderColor} w-28 rounded-md border px-3 py-2 text-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                disabled={loading}
-              >
-                {Object.keys(TIMEFRAMES).map((tf) => (
-                  <option key={tf} value={tf}>
-                    {tf}
-                  </option>
-                ))}
-              </select>
+              <div className="relative inline-block">
+                <select
+                  id="timeframe-select"
+                  value={selectedTimeframe}
+                  onChange={(e) => handleTimeframeChange(e.target.value)}
+                  className={`${controlBgColor} ${controlBorderColor} w-24 appearance-none rounded-md border px-3 py-2 pr-8 text-sm font-medium text-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 md:w-28 md:text-base`}
+                  disabled={loading && !connected}
+                >
+                  {Object.keys(TIMEFRAMES).map((tf) => (
+                    <option key={tf} value={tf}>
+                      {tf}
+                    </option>
+                  ))}
+                </select>
+                <div className="pointer-events-none absolute right-0 top-0 flex h-full items-center pr-2 text-slate-400">
+                  <svg
+                    className="h-4 w-4 fill-current"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+              </div>
             </div>
           </div>
 
           {/* Status Badge */}
           <div
-            className={`rounded-lg px-4 py-2.5 ${
+            className={`rounded-lg px-2 py-1.5 md:px-4 md:py-2.5 ${
               connected
                 ? "bg-emerald-500/20 text-emerald-300"
                 : "bg-blue-500/20 text-blue-300"
@@ -797,30 +865,39 @@ export default function BinanceVolumeChart() {
             } flex items-center`}
           >
             <span
-              className={`mr-2 inline-block h-2 w-2 rounded-full ${
+              className={`mr-1.5 inline-block h-1.5 w-1.5 rounded-full md:mr-2 md:h-2 md:w-2 ${
                 connected ? "bg-emerald-400" : "bg-blue-400"
               } animate-pulse`}
             ></span>
-            <span className="text-sm font-medium">{lastUpdate}</span>
+            <span className="text-xs font-medium md:text-sm">{lastUpdate}</span>
           </div>
         </div>
       </div>
 
       {/* Charts Section */}
-      <div className="mb-5 grid grid-cols-1 gap-5">
+      <div className="mb-3 grid grid-cols-1 gap-3 md:mb-5 md:gap-5">
+        {/* Optional TradingView Price Chart */}
+        {showPriceChart && (
+          <TradingViewPriceChart
+            symbol={selectedSymbol}
+            timeframe={selectedTimeframe}
+            hideHeader={false}
+          />
+        )}
+
         {/* Total Volume Chart */}
         <div
-          className={`${cardBgColor} rounded-xl p-4 shadow-lg ${borderColor} border`}
+          className={`${cardBgColor} rounded-xl p-2 shadow-lg md:p-4 ${borderColor} border`}
         >
-          <div className="mb-2.5 flex items-center justify-between">
+          <div className="mb-2 flex items-center justify-between md:mb-2.5">
             <div className="flex items-center">
-              <span className="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-[#dcdef0] opacity-60"></span>
-              <span className="font-medium text-slate-200">
+              <span className="mr-2 inline-block h-2 w-2 rounded-full bg-[#dcdef0] opacity-60 md:h-2.5 md:w-2.5"></span>
+              <span className="text-sm font-medium text-slate-200 md:text-base">
                 Total Volume ({selectedTimeframe})
               </span>
             </div>
             {volumeData.length > 0 && (
-              <div className="text-sm font-semibold text-blue-400">
+              <div className="text-xs font-semibold text-blue-400 md:text-sm">
                 {formatVolume(
                   volumeData[volumeData.length - 1].buyVolume +
                     volumeData[volumeData.length - 1].sellVolume,
@@ -830,29 +907,31 @@ export default function BinanceVolumeChart() {
           </div>
           <div
             ref={totalVolumeChartRef}
-            className="h-[calc((100vh-260px)/2)] w-full overflow-hidden rounded-md"
+            className="h-[200px] w-full overflow-hidden rounded-md md:h-[calc((100vh-280px)/2)]"
           />
         </div>
 
         {/* Pressure Chart */}
         <div
-          className={`${cardBgColor} rounded-xl p-4 shadow-lg ${borderColor} border`}
+          className={`${cardBgColor} rounded-xl p-2 shadow-lg md:p-4 ${borderColor} border`}
         >
-          <div className="mb-2.5 flex items-center justify-between">
-            <div className="flex items-center space-x-3">
+          <div className="mb-2 flex items-center justify-between md:mb-2.5">
+            <div className="flex items-center space-x-2 md:space-x-3">
               <div className="flex items-center">
-                <span className="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-[#0190FF]"></span>
-                <span className="font-medium text-slate-200">Buy Dominant</span>
+                <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[#0190FF] md:mr-2 md:h-2.5 md:w-2.5"></span>
+                <span className="text-sm font-medium text-slate-200 md:text-base">
+                  Buy Dominant
+                </span>
               </div>
               <div className="flex items-center">
-                <span className="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-[#FF3B69]"></span>
-                <span className="font-medium text-slate-200">
+                <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[#FF3B69] md:mr-2 md:h-2.5 md:w-2.5"></span>
+                <span className="text-sm font-medium text-slate-200 md:text-base">
                   Sell Dominant
                 </span>
               </div>
             </div>
             {volumeData.length > 0 && (
-              <div className="text-sm font-semibold">
+              <div className="text-xs font-semibold md:text-sm">
                 <span
                   className={
                     volumeData[volumeData.length - 1].buyVolume >
@@ -873,20 +952,20 @@ export default function BinanceVolumeChart() {
           </div>
           <div
             ref={pressureChartRef}
-            className="h-[calc((100vh-260px)/2)] w-full overflow-hidden rounded-md"
+            className="h-[200px] w-full overflow-hidden rounded-md md:h-[calc((100vh-280px)/2)]"
           />
         </div>
       </div>
 
-      {/* Footer Stats */}
+      {/* Footer Stats Section */}
       {volumeData.length > 0 && (
         <div
-          className={`${cardBgColor} rounded-lg p-3.5 ${borderColor} border text-sm text-slate-300`}
+          className={`${cardBgColor} rounded-lg p-2 md:p-3.5 ${borderColor} border text-xs text-slate-300 md:text-sm`}
         >
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-3 md:gap-3">
             <div className="flex items-center">
               <svg
-                className="mr-2.5 h-4 w-4 text-slate-400"
+                className="mr-2 h-3 w-3 text-slate-400 md:h-4 md:w-4"
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
                 fill="none"
@@ -901,7 +980,7 @@ export default function BinanceVolumeChart() {
               </svg>
               <div>
                 <div className="text-xs text-slate-400">Buy Volume</div>
-                <div className="font-medium text-[#0190FF]">
+                <div className="text-sm font-medium text-[#0190FF] md:text-base">
                   {formatVolume(volumeData[volumeData.length - 1].buyVolume)}
                 </div>
               </div>
@@ -909,7 +988,7 @@ export default function BinanceVolumeChart() {
 
             <div className="flex items-center">
               <svg
-                className="mr-2.5 h-4 w-4 text-slate-400"
+                className="mr-2 h-3 w-3 text-slate-400 md:h-4 md:w-4"
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
                 fill="none"
@@ -924,7 +1003,7 @@ export default function BinanceVolumeChart() {
               </svg>
               <div>
                 <div className="text-xs text-slate-400">Sell Volume</div>
-                <div className="font-medium text-[#FF3B69]">
+                <div className="text-sm font-medium text-[#FF3B69] md:text-base">
                   {formatVolume(volumeData[volumeData.length - 1].sellVolume)}
                 </div>
               </div>
@@ -932,7 +1011,7 @@ export default function BinanceVolumeChart() {
 
             <div className="flex items-center">
               <svg
-                className="mr-2.5 h-4 w-4 text-slate-400"
+                className="mr-2 h-3 w-3 text-slate-400 md:h-4 md:w-4"
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
                 fill="none"
@@ -946,7 +1025,7 @@ export default function BinanceVolumeChart() {
               <div>
                 <div className="text-xs text-slate-400">Net Pressure</div>
                 <div
-                  className={`font-medium ${
+                  className={`text-sm font-medium md:text-base ${
                     volumeData[volumeData.length - 1].buyVolume >
                     volumeData[volumeData.length - 1].sellVolume
                       ? "text-[#0190FF]"

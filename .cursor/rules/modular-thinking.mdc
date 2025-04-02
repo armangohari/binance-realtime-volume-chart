@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+You must think modularly and when you are designing files you must think about scalability in the project and thus implementing the files and coding right inside them to achieve modularity and scalability.
