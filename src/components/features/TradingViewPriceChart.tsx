@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface TradingViewPriceChartProps {
   symbol: string;
@@ -28,6 +28,11 @@ const timeframeToTVInterval = (timeframe: string): string => {
   return timeframeMap[timeframe] || "1";
 };
 
+// This defines the type for the TradingView widget instance
+interface TradingViewWidgetInstance {
+  remove: () => void;
+}
+
 export function TradingViewPriceChart({
   symbol,
   timeframe = "1m",
@@ -35,48 +40,100 @@ export function TradingViewPriceChart({
   hideHeader = false,
 }: TradingViewPriceChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [widgetInstance, setWidgetInstance] =
+    useState<TradingViewWidgetInstance | null>(null);
 
   // Constants for styling - matching the dark theme
   const cardBgColor = "bg-[#0f1217]";
   const borderColor = "border-[#252830]";
 
   useEffect(() => {
-    // Clean up any existing TradingView widgets first
-    if (containerRef.current && containerRef.current.innerHTML) {
-      containerRef.current.innerHTML = "";
-    }
+    // Load the TradingView library
+    const loadTradingViewLibrary = async () => {
+      // If script is already loaded, use it
+      if (typeof window.TradingView !== "undefined") {
+        initializeWidget();
+        return;
+      }
 
-    const script = document.createElement("script");
-    script.src = "https://s3.tradingview.com/tv.js";
-    script.async = true;
-    script.onload = () => {
-      if (typeof window.TradingView !== "undefined" && containerRef.current) {
-        new window.TradingView.widget({
-          container_id: containerRef.current.id,
-          symbol: `BINANCE:${symbol}`.toUpperCase(),
-          theme: "dark",
-          locale: "en",
-          autosize: true,
-          interval: timeframeToTVInterval(timeframe),
-          timezone: "exchange",
-          style: "1",
-          toolbar_bg: "#161b24",
-          enable_publishing: false,
-          allow_symbol_change: false,
-          save_image: true,
-          hide_top_toolbar: true,
-          hide_side_toolbar: false,
-          favorites: {
-            intervals: ["1", "5", "15", "30", "60", "240"],
-          },
-        });
+      try {
+        // Create script element and load the TradingView library
+        const script = document.createElement("script");
+        script.id = "tradingview-widget-script";
+        script.src = "https://s3.tradingview.com/tv.js";
+        script.async = true;
+
+        // Initialize widget once script is loaded
+        script.onload = () => initializeWidget();
+
+        // Handle errors
+        script.onerror = () => {
+          console.error("Failed to load TradingView library");
+        };
+
+        document.head.appendChild(script);
+      } catch (error) {
+        console.error("Error loading TradingView library:", error);
       }
     };
-    document.head.appendChild(script);
 
+    // Initialize the TradingView widget
+    const initializeWidget = () => {
+      if (!containerRef.current || typeof window.TradingView === "undefined")
+        return;
+
+      // Clean up existing widget if it exists
+      if (widgetInstance) {
+        widgetInstance.remove();
+        setWidgetInstance(null);
+      }
+
+      // Clear the container
+      containerRef.current.innerHTML = "";
+
+      // Create new widget instance
+      const widget = new window.TradingView.widget({
+        container_id: containerRef.current.id,
+        symbol: `BINANCE:${symbol}`.toUpperCase(),
+        theme: "dark",
+        locale: "en",
+        autosize: true,
+        interval: timeframeToTVInterval(timeframe),
+        timezone: "exchange",
+        style: "1",
+        toolbar_bg: "#161b24",
+        enable_publishing: false,
+        allow_symbol_change: false,
+        save_image: true,
+        hide_top_toolbar: true,
+        hide_side_toolbar: false,
+        studies: ["Volume@tv-basicstudies"],
+        favorites: {
+          intervals: ["1", "5", "15", "30", "60", "240"],
+        },
+      });
+
+      // Store widget instance for cleanup
+      setWidgetInstance(widget as unknown as TradingViewWidgetInstance);
+    };
+
+    // Load the library
+    loadTradingViewLibrary();
+
+    // Cleanup function
     return () => {
-      if (document.head.contains(script)) {
-        document.head.removeChild(script);
+      // Check if the widgetInstance exists and the container ref is still valid
+      if (widgetInstance && containerRef.current) {
+        try {
+          widgetInstance.remove();
+        } catch (error) {
+          console.error("Error removing TradingView widget:", error);
+        }
+        setWidgetInstance(null);
+        // Optional: Clear the container to be sure
+        // if (containerRef.current) {
+        //  containerRef.current.innerHTML = "";
+        // }
       }
     };
   }, [symbol, timeframe]);
@@ -106,6 +163,7 @@ export function TradingViewPriceChart({
         ref={containerRef}
         id={`tradingview_${symbol}`}
         className={`h-[300px] w-full md:h-[400px] ${className} overflow-hidden rounded-xl ${borderColor} border`}
+        data-testid="tradingview-chart"
       />
     </div>
   );
