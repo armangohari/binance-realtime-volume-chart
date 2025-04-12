@@ -1,0 +1,37 @@
+apps:
+  - id: binance-chart-app
+    name: BinanceChartApp
+    image: armangohari/binance-realtime-volume-chart-app:v1.0.0
+    bundlePlanID: standard
+    planID: small-g2
+    port: 3000
+    envs:
+      NODE_ENV: production
+      DATABASE_URL: >-
+        postgresql://$DB_binance_USER:$DB_binance_PASSWORD@$DB_binance_HOST:$DB_binance_PORT/$DB_binance_NAME?schema=public
+      BINANCE_WS_URL: wss://stream.binance.com:9443/ws
+  - id: binance-chart-worker
+    name: BinanceChartWorker
+    image: armangohari/binance-realtime-volume-chart-worker:v1.0.0
+    bundlePlanID: standard
+    planID: small-g2
+    port: 3333
+    envs:
+      NODE_ENV: production
+      DATABASE_URL: >-
+        postgresql://$DB_binance_USER:$DB_binance_PASSWORD@$DB_binance_HOST:$DB_binance_PORT/$DB_binance_NAME?schema=public
+      BINANCE_WS_URL: wss://stream.binance.com:9443/ws
+      SYMBOLS: btcusdt,ethusdt,solusdt,xrpusdt,dogeusdt,adausdt
+      DB_BATCH_SIZE: '10'
+      DB_FLUSH_INTERVAL: '1000'
+databases:
+  - type: postgres
+    id: binance
+    version: '15.4'
+    bundlePlanID: standard
+    planID: small-g2
+    disks:
+      - name: PostgresData
+        mountTo: /var/lib/postgresql/data
+        size: 100
+        maxSize: 4
