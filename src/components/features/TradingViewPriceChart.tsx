@@ -2,6 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 
+// Add TradingView type declaration for window object
+declare global {
+  interface Window {
+    TradingView: any;
+  }
+}
+
 interface TradingViewPriceChartProps {
   symbol: string;
   timeframe?: string;

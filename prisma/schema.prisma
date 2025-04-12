@@ -19,26 +19,5 @@ model RawTrade {
     quantity     Decimal  @db.Decimal(18, 8) // Adjust precision as needed
     isBuyerMaker Boolean // true = sell order matched, false = buy order matched
 
-    @@unique([pair]) // Ensure no duplicate trades
     @@index([pair, timestamp]) // Crucial index for querying
-}
-
-// Trade volume data aggregated by timeframe (cached for performance)
-// This is optional - we can compute this on-the-fly from RawTrade
-// but having a table can improve query performance for frequently accessed data
-model AggregatedTradeVolume {
-    id          Int      @id @default(autoincrement())
-    timestamp   DateTime @db.Timestamp(6)
-    pair        String   @db.VarChar(20)
-    timeframe   String   @db.VarChar(10) // e.g., "1m", "5m"
-    open        Decimal  @db.Decimal(18, 8)
-    high        Decimal  @db.Decimal(18, 8)
-    low         Decimal  @db.Decimal(18, 8)
-    close       Decimal  @db.Decimal(18, 8)
-    totalVolume Decimal  @db.Decimal(18, 8)
-    buyVolume   Decimal  @db.Decimal(18, 8)
-    sellVolume  Decimal  @db.Decimal(18, 8)
-
-    @@unique([pair, timeframe, timestamp])
-    @@index([pair, timeframe, timestamp])
 }

@@ -36,7 +36,7 @@ FROM base AS runner
 WORKDIR /app
 
 # Install wget for healthcheck and postgresql-client for database checks
-RUN apk add --no-cache wget postgresql-client
+RUN apk add --no-cache wget postgresql-client netcat-openbsd
 
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
@@ -48,6 +48,13 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
 # Explicitly copy the schema file
 COPY --from=builder /app/prisma/schema.prisma ./prisma/schema.prisma
+# Copy wait-for-it script
+COPY scripts/wait-for-it.sh /wait-for-it.sh
+RUN chmod +x /wait-for-it.sh
+
+# Create entrypoint script
+COPY scripts/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 # Set the correct permission for prerender cache
 RUN mkdir .next
@@ -64,3 +71,6 @@ EXPOSE 3000
 
 ENV PORT 3000
 ENV HOSTNAME "0.0.0.0"
+
+# Run the entrypoint script
+CMD ["/entrypoint.sh"]
