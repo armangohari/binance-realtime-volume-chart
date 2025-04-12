@@ -1,13 +1,10 @@
 "use client";
 
 import {
-  ColorType,
-  HistogramSeries,
-  ISeriesApi,
-  UTCTimestamp,
-  createChart,
-} from "lightweight-charts";
-import { useEffect, useRef, useState } from "react";
+  COMMON_BINANCE_PAIRS,
+  TIMEFRAMES,
+  formatPairName,
+} from "@/constants/binancePairs";
 import {
   BinanceTrade,
   TradeVolumeData,
@@ -16,12 +13,15 @@ import {
   formatVolume,
   processTradeData,
 } from "@/utils/tradeUtils";
-import { TradingViewPriceChart } from "./TradingViewPriceChart";
 import {
-  COMMON_BINANCE_PAIRS,
-  TIMEFRAMES,
-  formatPairName,
-} from "@/constants/binancePairs";
+  ColorType,
+  HistogramSeries,
+  ISeriesApi,
+  UTCTimestamp,
+  createChart,
+} from "lightweight-charts";
+import { useEffect, useRef, useState } from "react";
+import { TradingViewPriceChart } from "./TradingViewPriceChart";
 
 // Define interfaces for our chart references
 interface TotalVolumeChart {
@@ -437,7 +437,7 @@ export default function BinanceTradeVolumeChart() {
     }, backoffTime);
   };
 
-  // Connect to Binance WebSocket on component mount or when symbol/timeframe changes
+  // Modify the useEffect that handles symbol/timeframe changes
   useEffect(() => {
     if (!totalVolumeChartComponents.current || !pressureChartComponents.current)
       return;
@@ -609,6 +609,69 @@ export default function BinanceTradeVolumeChart() {
       }
     }, 100); // Small delay to ensure proper cleanup
 
+    // Add a timer to check for missing candles in real-time mode
+    const missingCandleCheckInterval = setInterval(() => {
+      if (!isMountedRef.current || volumeData.length === 0) return;
+
+      const now = Date.now();
+      const currentTimeframeMs =
+        TIMEFRAMES[currentTimeframeRef.current as keyof typeof TIMEFRAMES] *
+        1000;
+
+      // Get the latest candle from our data
+      const latestCandle = volumeData[volumeData.length - 1];
+      const latestCandleTime = latestCandle.time;
+
+      // Check if we are missing the current candle
+      const currentCandleTime =
+        Math.floor(now / currentTimeframeMs) * currentTimeframeMs;
+
+      // If the current candle doesn't exist yet, add it
+      if (
+        currentCandleTime > latestCandleTime &&
+        !dataMapRef.current.has(currentCandleTime)
+      ) {
+        console.log(
+          `Adding missing current candle for ${new Date(currentCandleTime).toISOString()}`,
+        );
+
+        // Add the missing candle to our data map
+        dataMapRef.current.set(currentCandleTime, {
+          time: currentCandleTime,
+          buyVolume: 0,
+          sellVolume: 0,
+        });
+
+        // Check if we're missing any candles in between the latest and current
+        for (
+          let t = latestCandleTime + currentTimeframeMs;
+          t < currentCandleTime;
+          t += currentTimeframeMs
+        ) {
+          if (!dataMapRef.current.has(t)) {
+            console.log(
+              `Adding missing intermediate candle for ${new Date(t).toISOString()}`,
+            );
+            dataMapRef.current.set(t, {
+              time: t,
+              buyVolume: 0,
+              sellVolume: 0,
+            });
+          }
+        }
+
+        // Update state with the latest data including zero-volume candles
+        const newData = Array.from(dataMapRef.current.values())
+          .sort((a, b) => a.time - b.time)
+          .slice(-100); // Keep last 100 bars for performance
+
+        setVolumeData(newData);
+        setLastUpdate(
+          `Last update: ${formatTimestamp(now)} (${currentTimeframeRef.current}) - Added empty candles`,
+        );
+      }
+    }, 1000); // Check every second
+
     return () => {
       // Clear the timeout on cleanup
       clearTimeout(timeoutId);
@@ -631,6 +694,9 @@ export default function BinanceTradeVolumeChart() {
         }
         wsRef.current = null;
       }
+
+      // Clear the missing candle check interval
+      clearInterval(missingCandleCheckInterval);
     };
   }, [symbol, selectedTimeframe]);
 
@@ -642,27 +708,27 @@ export default function BinanceTradeVolumeChart() {
     );
   }, [selectedTimeframe]);
 
-  // Update charts with new data
+  // Also modify the effect that processes new volume data before chart update
   useEffect(() => {
-    if (
-      !totalVolumeChartComponents.current ||
-      !pressureChartComponents.current ||
-      volumeData.length === 0
-    )
+    if (!totalVolumeChartComponents.current || !pressureChartComponents.current)
       return;
 
     try {
-      console.log("Updating chart data with", volumeData.length, "bars");
+      if (volumeData.length === 0) return;
+
+      const continuousData = volumeData; // Use volumeData directly
+
+      console.log("Updating chart data with", continuousData.length, "bars");
 
       // Format data for total volume series (buy + sell)
-      const totalVolumeData = volumeData.map((item) => ({
+      const totalVolumeData = continuousData.map((item) => ({
         time: (item.time / 1000) as UTCTimestamp,
         value: item.buyVolume + item.sellVolume,
         color: "rgba(220, 220, 240, 0.65)",
       }));
 
       // Format data for pressure series with dynamic colors
-      const pressureData = volumeData.map((item) => {
+      const pressureData = continuousData.map((item) => {
         const netPressure = Math.abs(item.buyVolume - item.sellVolume);
         const isBuyDominant = item.buyVolume > item.sellVolume;
 
@@ -701,7 +767,7 @@ export default function BinanceTradeVolumeChart() {
     } catch (error) {
       console.error("Error updating chart data:", error);
     }
-  }, [volumeData]);
+  }, [volumeData, selectedTimeframe]);
 
   return (
     <div
@@ -805,14 +871,14 @@ export default function BinanceTradeVolumeChart() {
             className={`rounded-lg px-2 py-1.5 md:px-4 md:py-2.5 ${
               connected
                 ? "bg-emerald-500/20 text-emerald-300"
-                : "bg-blue-500/20 text-blue-300"
+                : "bg-yellow-500/20 text-yellow-300"
             } border ${
-              connected ? "border-emerald-600/30" : "border-blue-600/30"
+              connected ? "border-emerald-600/30" : "border-yellow-600/30"
             } flex items-center`}
           >
             <span
               className={`mr-1.5 inline-block h-1.5 w-1.5 rounded-full md:mr-2 md:h-2 md:w-2 ${
-                connected ? "bg-emerald-400" : "bg-blue-400"
+                connected ? "bg-emerald-400" : "bg-yellow-400"
               } animate-pulse`}
             ></span>
             <span className="text-xs font-medium md:text-sm">{lastUpdate}</span>

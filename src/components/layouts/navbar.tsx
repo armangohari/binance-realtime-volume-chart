@@ -20,14 +20,14 @@ const mainNav = [
     icon: <MdHome className="h-5 w-5" />,
   },
   {
-    name: "Orderbook Volume",
-    href: "/orderbook-volume",
-    icon: <MdShowChart className="h-5 w-5" />,
+    name: "Live Trade Volume",
+    href: "/trade-price-volume",
+    icon: <MdBarChart className="h-5 w-5" />,
   },
   {
-    name: "Trade Volume",
-    href: "/trade-volume",
-    icon: <MdBarChart className="h-5 w-5" />,
+    name: "Live Orderbook Volume",
+    href: "/orderbook-volume",
+    icon: <MdShowChart className="h-5 w-5" />,
   },
 ];
 
@@ -36,11 +36,11 @@ export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <header className="border-border/40 sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
         <div className="mr-4 flex md:hidden">
           <button
-            className="text-muted-foreground inline-flex items-center justify-center rounded-md p-2 hover:text-foreground"
+            className="inline-flex items-center justify-center rounded-md p-2 text-muted-foreground hover:text-foreground"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Toggle menu"
           >
@@ -53,7 +53,7 @@ export function Navbar() {
         </div>
         <div className="flex flex-1 items-center justify-between">
           <Link href="/" className="flex items-center space-x-2">
-            <MdShowChart className="text-primary h-6 w-6" />
+            <MdShowChart className="h-6 w-6 text-primary" />
             <span className="inline-block font-bold">Binance Analytics</span>
           </Link>
           <nav className="hidden md:flex md:gap-6 lg:gap-10">
@@ -88,7 +88,7 @@ export function Navbar() {
                 href={item.href}
                 onClick={() => setMobileMenuOpen(false)}
                 className={cn(
-                  "hover:bg-accent flex items-center rounded-md px-2 py-1.5 text-sm font-medium transition-colors",
+                  "flex items-center rounded-md px-2 py-1.5 text-sm font-medium transition-colors hover:bg-accent",
                   pathname === item.href
                     ? "bg-accent text-accent-foreground"
                     : "text-muted-foreground",

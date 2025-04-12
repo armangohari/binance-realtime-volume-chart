@@ -26,6 +26,12 @@ export interface TradeVolumeData {
   time: number;
   buyVolume: number;
   sellVolume: number;
+  // Add optional OHLC fields used by the charts
+  open?: number;
+  high?: number;
+  low?: number;
+  close?: number;
+  totalVolume?: number;
 }
 
 // ----- DATA PROCESSING FUNCTIONS -----

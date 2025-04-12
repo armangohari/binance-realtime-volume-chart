@@ -7,6 +7,7 @@ interface TradingViewPriceChartProps {
   timeframe?: string;
   className?: string;
   hideHeader?: boolean;
+  hideVolume?: boolean;
 }
 
 // Mapping from our timeframe format to TradingView format
@@ -38,6 +39,7 @@ export function TradingViewPriceChart({
   timeframe = "1m",
   className = "",
   hideHeader = false,
+  hideVolume = false,
 }: TradingViewPriceChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [widgetInstance, setWidgetInstance] =
@@ -91,8 +93,8 @@ export function TradingViewPriceChart({
       // Clear the container
       containerRef.current.innerHTML = "";
 
-      // Create new widget instance
-      const widget = new window.TradingView.widget({
+      // Create widget configuration
+      const widgetOptions: any = {
         container_id: containerRef.current.id,
         symbol: `BINANCE:${symbol}`.toUpperCase(),
         theme: "dark",
@@ -107,14 +109,95 @@ export function TradingViewPriceChart({
         save_image: true,
         hide_top_toolbar: true,
         hide_side_toolbar: false,
-        studies: ["Volume@tv-basicstudies"],
+        studies: [],
         favorites: {
           intervals: ["1", "5", "15", "30", "60", "240"],
         },
-      });
+        // Add a callback when chart is ready
+        onChartReady: function () {
+          if (hideVolume) {
+            // This ensures we run after the widget is fully loaded
+            console.log("Chart is ready, removing volume pane");
+            // If there's a chart object exposed by TradingView, we can try to use it
+            if ((window as any).tvWidget && (window as any).tvWidget.chart) {
+              try {
+                (window as any).tvWidget.chart.removeAllShapes();
+                (window as any).tvWidget.chart.removeAllStudies();
+              } catch (e) {
+                console.error("Failed to remove studies:", e);
+              }
+            }
+          }
+        },
+      };
+
+      // Add additional options to hide volume if needed
+      if (hideVolume) {
+        widgetOptions.hide_volume = true;
+        widgetOptions.loading_screen = { backgroundColor: "#0f1217" };
+
+        // Attempt to set various properties that might hide volume
+        widgetOptions.overrides = {
+          "paneProperties.legendProperties.showVolume": false,
+          "paneProperties.showVolume": false,
+          "scalesProperties.showVolume": false,
+          volumePaneSize: "tiny",
+          "mainSeriesProperties.showVolume": false,
+          "scalesProperties.showVolumeSeparately": false,
+        };
+
+        // Set volume colors to transparent
+        widgetOptions.studies_overrides = {
+          "volume.volume.color.0": "rgba(0,0,0,0)",
+          "volume.volume.color.1": "rgba(0,0,0,0)",
+          "volume.volume.transparency": 100,
+          "volume.show": false,
+          "volume.options.showStudyArguments": false,
+          "volume.options.showLastValue": false,
+        };
+
+        // Don't show any indicators by default
+        widgetOptions.drawings_access = {
+          type: "black",
+          tools: [{ name: "volume" }],
+        };
+      }
+
+      // Create new widget instance
+      const widget = new window.TradingView.widget(widgetOptions);
 
       // Store widget instance for cleanup
       setWidgetInstance(widget as unknown as TradingViewWidgetInstance);
+
+      // Add event listener to hide volume panel after widget is loaded
+      if (hideVolume && containerRef.current) {
+        const hideVolumePanel = () => {
+          if (containerRef.current) {
+            // Find and hide any volume panes
+            const volumePanes =
+              containerRef.current.querySelectorAll(".tv-volumepane");
+            volumePanes.forEach((pane) => {
+              if (pane instanceof HTMLElement) {
+                pane.style.display = "none";
+              }
+            });
+
+            // Try to find and remove volume via class names
+            const volumeElements =
+              containerRef.current.querySelectorAll('[class*="volume"]');
+            volumeElements.forEach((element) => {
+              if (element instanceof HTMLElement) {
+                element.style.display = "none";
+              }
+            });
+          }
+        };
+
+        // Try multiple times as the widget loads asynchronously
+        setTimeout(hideVolumePanel, 1000);
+        setTimeout(hideVolumePanel, 2000);
+        setTimeout(hideVolumePanel, 3000);
+      }
     };
 
     // Load the library
@@ -136,7 +219,7 @@ export function TradingViewPriceChart({
         // }
       }
     };
-  }, [symbol, timeframe]);
+  }, [symbol, timeframe, hideVolume]);
 
   return (
     <div className={hideHeader ? "" : "flex flex-col gap-4"}>

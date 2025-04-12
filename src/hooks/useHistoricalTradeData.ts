@@ -24,7 +24,7 @@ export function useHistoricalTradeData(pair: string, timeframe: string) {
         throw error;
       }
     },
-    refetchInterval: 30000, // Refetch every 30 seconds
-    staleTime: 10000, // Data becomes stale after 10 seconds
+    refetchInterval: 1000, // Refetch every 1 second
+    staleTime: 1000, // Data becomes stale after 1 second
   });
 }
