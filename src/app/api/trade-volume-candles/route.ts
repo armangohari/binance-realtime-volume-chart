@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getAggregatedTradeCandles } from "@/utils/tradeAggregationUtils";
 import { COMMON_BINANCE_PAIRS, TIMEFRAMES } from "@/constants/binancePairs";
+import { getAggregatedTradeCandles } from "@/utils/tradeAggregationUtils";
+import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic"; // No caching
 

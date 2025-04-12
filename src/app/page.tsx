@@ -8,7 +8,6 @@ import {
   MdQueryStats,
   MdShowChart,
   MdTimer,
-  MdTrackChanges,
 } from "react-icons/md";
 
 export default function Home() {

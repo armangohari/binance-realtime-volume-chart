@@ -1,8 +1,8 @@
 "use server";
 
+import { TIMEFRAMES } from "@/constants/binancePairs";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
-import { TIMEFRAMES } from "@/constants/binancePairs";
 
 export interface CandleData {
   time: number; // Timestamp in milliseconds

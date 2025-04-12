@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
 import { COMMON_BINANCE_PAIRS, TIMEFRAMES } from "@/constants/binancePairs";
+import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic"; // No caching
 

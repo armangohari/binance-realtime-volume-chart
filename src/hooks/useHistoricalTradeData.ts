@@ -1,8 +1,8 @@
 "use client";
 
-import axios from "axios";
 import { CandleData } from "@/utils/tradeAggregationUtils";
 import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
 
 interface TradeVolumeResponse {
   pair: string;

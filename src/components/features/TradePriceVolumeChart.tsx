@@ -8,22 +8,22 @@ import {
 import { useHistoricalTradeData } from "@/hooks/useHistoricalTradeData";
 import { formatVolume } from "@/utils/tradeUtils";
 import {
-  ColorType,
+  CandlestickData,
   CandlestickSeries,
+  ColorType,
+  HistogramData,
   HistogramSeries,
+  IChartApi,
   ISeriesApi,
+  MouseEventParams,
   UTCTimestamp,
   createChart,
-  IChartApi,
-  MouseEventParams,
-  CandlestickData,
-  HistogramData,
 } from "lightweight-charts";
+import { useTheme } from "next-themes";
 import { useEffect, useRef, useState } from "react";
 import { FaArrowTrendDown, FaArrowTrendUp } from "react-icons/fa6";
 import { IoStatsChart } from "react-icons/io5";
 import { MdSwapVert } from "react-icons/md";
-import { useTheme } from "next-themes";
 
 // Define interfaces for our chart reference
 interface ChartComponents {
