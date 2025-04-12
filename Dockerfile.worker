@@ -1,0 +1,30 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json package-lock.json ./
+COPY prisma ./prisma/
+COPY tsconfig.json ./
+
+# Install dependencies with enhanced retry logic for npm
+RUN npm config set registry https://registry.npmjs.org/ && \
+    npm config set fetch-retry-mintimeout 100000 && \
+    npm config set fetch-retry-maxtimeout 300000 && \
+    npm config set fetch-retries 8 && \
+    for i in {1..5}; do npm ci && break || sleep 15; done
+
+# Copy application code
+COPY . .
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# Compile TypeScript to JavaScript
+RUN npx tsc worker/index.ts --esModuleInterop --skipLibCheck
+
+# Set environment variables
+ENV NODE_ENV production
+
+# Run database migrations and start the worker
+CMD ["sh", "-c", "npx prisma migrate deploy && node worker/index.js"]

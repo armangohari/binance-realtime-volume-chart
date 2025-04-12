@@ -1,0 +1,92 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: binance-chart-db
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-binance}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-binance}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - app-network
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: binance-chart-worker
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-binance}?schema=public
+      BINANCE_WS_URL: ${BINANCE_WS_URL:-wss://stream.binance.com:9443/ws}
+      SYMBOLS: ${SYMBOLS:-btcusdt,ethusdt,solusdt,xrpusdt,dogeusdt,adausdt}
+      DB_BATCH_SIZE: ${DB_BATCH_SIZE:-100}
+      DB_FLUSH_INTERVAL: ${DB_FLUSH_INTERVAL:-5000}
+    healthcheck:
+      test: ["CMD", "node", "-e", "process.exit(0)"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: binance-chart-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-binance}?schema=public
+      BINANCE_WS_URL: ${BINANCE_WS_URL:-wss://stream.binance.com:9443/ws}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--spider",
+          "--quiet",
+          "http://localhost:3000/api/health",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      db:
+        condition: service_healthy
+      worker:
+        condition: service_started
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+    name: binance-chart-postgres-data
+
+networks:
+  app-network:
+    driver: bridge
+    name: binance-chart-network

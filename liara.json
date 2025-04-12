@@ -1,0 +1,21 @@
+{
+  "port": 3000,
+  "platform": "docker",
+  "app": "money",
+  "build": {
+    "location": "germany"
+  },
+  "env": {
+    "DATABASE_URL": "$DATABASE_URL",
+    "BINANCE_WS_URL": "wss://stream.binance.com:9443/ws",
+    "BINANCE_REST_URL": "https://api.binance.com",
+    "SYMBOLS": "btcusdt,ethusdt,solusdt,xrpusdt,dogeusdt,adausdt",
+    "DB_BATCH_SIZE": "100",
+    "DB_FLUSH_INTERVAL": "5000",
+    "PRICE_LEVELS": "50",
+    "PRICE_OFFSET": "0.05",
+    "REAL_TIME_WINDOW": "1000",
+    "NODE_ENV": "production",
+    "NEXT_TELEMETRY_DISABLED": "1"
+  }
+}
