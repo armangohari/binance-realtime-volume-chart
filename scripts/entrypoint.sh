@@ -4,20 +4,19 @@ set -e
 
 echo "Starting Next.js app container..."
 
-# Wait for the database to be ready
-echo "Waiting for database to be available..."
-/wait-for-it.sh db 5432
-echo "Database is available!"
-
-# Run migrations
-echo "Running Prisma migrations..."
-npx prisma migrate deploy
-echo "Migrations completed!"
-
 # Print environment information
 echo "Environment:"
 echo "NODE_ENV=$NODE_ENV"
-echo "DATABASE_URL=$DATABASE_URL"
+echo "DATABASE_URL exists: $(if [ -n "$DATABASE_URL" ]; then echo "yes"; else echo "no"; fi)"
+
+# Run migrations if DATABASE_URL is set
+if [ -n "$DATABASE_URL" ]; then
+  echo "Running Prisma migrations..."
+  npx prisma migrate deploy
+  echo "Migrations completed!"
+else
+  echo "Warning: DATABASE_URL is not set, skipping migrations"
+fi
 
 # Check if server.js exists
 if [ ! -f ./server.js ]; then

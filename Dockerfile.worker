@@ -14,9 +14,6 @@ RUN npm config set registry https://registry.npmjs.org/ && \
     npm config set fetch-retries 8 && \
     for i in {1..5}; do npm ci && break || sleep 15; done
 
-# Install netcat for wait-for-it script
-RUN apk add --no-cache netcat-openbsd
-
 # Copy application code
 COPY . .
 
@@ -28,10 +25,6 @@ RUN npx tsc worker/index.ts --esModuleInterop --skipLibCheck
 
 # Set environment variables
 ENV NODE_ENV production
-
-# Add script to wait for database and run migrations
-COPY scripts/wait-for-it.sh /wait-for-it.sh
-RUN chmod +x /wait-for-it.sh
 
 # Create entrypoint script
 COPY scripts/worker-entrypoint.sh /worker-entrypoint.sh

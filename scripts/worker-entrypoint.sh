@@ -4,22 +4,21 @@ set -e
 
 echo "Starting worker container..."
 
-# Wait for the database to be ready
-echo "Waiting for database to be available..."
-/wait-for-it.sh db 5432
-echo "Database is available!"
-
-# Run migrations
-echo "Running Prisma migrations..."
-npx prisma migrate deploy
-echo "Migrations completed!"
-
 # Print environment information
 echo "Environment:"
 echo "NODE_ENV=$NODE_ENV"
-echo "DATABASE_URL=$DATABASE_URL"
+echo "DATABASE_URL exists: $(if [ -n "$DATABASE_URL" ]; then echo "yes"; else echo "no"; fi)"
 echo "BINANCE_WS_URL=$BINANCE_WS_URL"
 echo "SYMBOLS=$SYMBOLS"
+
+# Run migrations if DATABASE_URL is set
+if [ -n "$DATABASE_URL" ]; then
+  echo "Running Prisma migrations..."
+  npx prisma migrate deploy
+  echo "Migrations completed!"
+else
+  echo "Warning: DATABASE_URL is not set, skipping migrations"
+fi
 
 # Check if index.js exists
 if [ ! -f ./worker/index.js ]; then
