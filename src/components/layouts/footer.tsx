@@ -29,7 +29,7 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/trade-price-volume"
+                  href="/trade-volume"
                   className="text-muted-foreground transition-colors hover:text-foreground"
                 >
                   Live Trade Volume

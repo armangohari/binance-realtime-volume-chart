@@ -21,7 +21,7 @@ const mainNav = [
   },
   {
     name: "Live Trade Volume",
-    href: "/trade-price-volume",
+    href: "/trade-volume",
     icon: <MdBarChart className="h-5 w-5" />,
   },
   {
