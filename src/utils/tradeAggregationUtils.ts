@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 
 // Define the time window for fetching recent trades (in minutes)
-const RECENT_TRADES_FETCH_WINDOW_MINUTES = 5;
+const RECENT_TRADES_FETCH_WINDOW_MINUTES = 5 - 1;
 
 export interface CandleData {
   time: number; // Timestamp in milliseconds
