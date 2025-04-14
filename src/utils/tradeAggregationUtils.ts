@@ -4,6 +4,9 @@ import { TIMEFRAMES } from "@/constants/binancePairs";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 
+// Define the time window for fetching recent trades (in minutes)
+const RECENT_TRADES_FETCH_WINDOW_MINUTES = 5;
+
 export interface CandleData {
   time: number; // Timestamp in milliseconds
   open: number;
@@ -49,12 +52,18 @@ export async function getAggregatedTradeCandles(
   pair: string,
   timeframe: string,
 ): Promise<CandleData[]> {
-  const timeframeMs = await getTimeframeInMs(timeframe);
+  // Calculate timestamp for the start of the fetch window
+  const startTime = new Date(
+    Date.now() - RECENT_TRADES_FETCH_WINDOW_MINUTES * 60 * 1000,
+  );
 
-  // Get all raw trades for the pair ordered by timestamp
+  // Get raw trades from the defined time window for the pair ordered by timestamp
   const rawTrades = await prisma.rawTrade.findMany({
     where: {
       pair: pair.toLowerCase(),
+      timestamp: {
+        gte: startTime, // Filter for trades within the defined window
+      },
     },
     orderBy: {
       timestamp: "asc",
