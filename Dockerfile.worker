@@ -6,6 +6,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY prisma ./prisma/
 COPY tsconfig.json ./
+COPY tsconfig.worker.json ./
 
 # Install dependencies with enhanced retry logic for npm
 RUN npm config set registry https://registry.npmjs.org/ && \
@@ -15,13 +16,13 @@ RUN npm config set registry https://registry.npmjs.org/ && \
     for i in {1..5}; do npm ci && break || sleep 15; done
 
 # Copy application code
-COPY . .
+COPY . ./
 
 # Generate Prisma client
 RUN npx prisma generate
 
-# Compile TypeScript to JavaScript
-RUN npx tsc worker/index.ts --esModuleInterop --skipLibCheck
+# Compile TypeScript to JavaScript using the worker-specific config
+RUN npx tsc -p tsconfig.worker.json
 
 # Set environment variables
 ENV NODE_ENV=production
@@ -31,4 +32,5 @@ COPY scripts/worker-entrypoint.sh /worker-entrypoint.sh
 RUN chmod +x /worker-entrypoint.sh
 
 # Run the entrypoint script
+# The entrypoint script needs to execute the compiled JS: node dist/worker/index.js
 CMD ["/worker-entrypoint.sh"]

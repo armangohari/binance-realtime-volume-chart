@@ -20,13 +20,16 @@ else
   echo "Warning: DATABASE_URL is not set, skipping migrations"
 fi
 
-# Check if index.js exists
-if [ ! -f ./worker/index.js ]; then
-  echo "Error: worker/index.js not found!"
-  ls -la worker/
+# Check if the compiled index.js exists in dist
+if [ ! -f ./dist/worker/index.js ]; then
+  echo "Error: dist/worker/index.js not found!"
+  echo "Listing dist directory:"
+  ls -la dist/
+  echo "Listing dist/worker directory:"
+  ls -la dist/worker/
   exit 1
 fi
 
-# Start the worker
+# Start the worker using the compiled file
 echo "Starting worker process..."
-exec node worker/index.js 
+exec node dist/worker/index.js 

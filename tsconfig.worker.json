@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "outDir": "./dist",
+    "noEmit": false,
+    "isolatedModules": false,
+    "lib": ["es2020"],
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["worker/**/*.ts", "src/utils/**/*.ts", "src/constants/**/*.ts"],
+  "exclude": ["node_modules", ".next", "out", "dist", "src"]
+}
