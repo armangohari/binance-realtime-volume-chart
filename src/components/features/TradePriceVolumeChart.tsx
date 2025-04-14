@@ -20,10 +20,16 @@ import {
   createChart,
 } from "lightweight-charts";
 import { useTheme } from "next-themes";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { FaArrowTrendDown, FaArrowTrendUp } from "react-icons/fa6";
 import { IoStatsChart } from "react-icons/io5";
 import { MdSwapVert } from "react-icons/md";
+// Import react-resizable-panels components
+import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+
+// Constants for resizing
+const MIN_PANEL_SIZE_PERCENT = 10; // Minimum panel size as a percentage
+const HANDLE_HEIGHT_PX = 8;
 
 // Define interfaces for our chart reference
 interface ChartComponents {
@@ -36,6 +42,7 @@ interface ChartComponents {
 }
 
 export default function TradePriceVolumeChart() {
+  const containerRef = useRef<HTMLDivElement>(null); // Ref for the main charts container
   const priceChartRef = useRef<HTMLDivElement>(null);
   const volumeChartRef = useRef<HTMLDivElement>(null); // Net Pressure
   const totalVolumeChartRef = useRef<HTMLDivElement>(null); // Total Volume
@@ -44,6 +51,11 @@ export default function TradePriceVolumeChart() {
   const [symbol, setSymbol] = useState<string>("btcusdt");
   const [selectedTimeframe, setSelectedTimeframe] = useState<string>("1m");
   const [syncingCharts, setSyncingCharts] = useState<boolean>(false);
+  // State for panel sizes (as percentages) - obtained from react-resizable-panels
+  const [panelSizes, setPanelSizes] = useState<number[]>([60, 20, 20]);
+  // State for container height (to calculate chart pixel heights)
+  const [containerHeight, setContainerHeight] = useState<number>(0);
+  const [containerWidth, setContainerWidth] = useState<number>(0);
 
   // Fetch historical data using React Query
   const { data, isLoading, isError, error } = useHistoricalTradeData(
@@ -88,17 +100,48 @@ export default function TradePriceVolumeChart() {
     };
   };
 
+  // Update container dimensions using ResizeObserver
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      if (entries[0]) {
+        const { width, height } = entries[0].contentRect;
+        setContainerWidth(width);
+        setContainerHeight(height); // Store the raw height
+      }
+    });
+
+    resizeObserver.observe(containerRef.current);
+
+    // Initial measurement
+    const { width, height } = containerRef.current.getBoundingClientRect();
+    setContainerWidth(width);
+    setContainerHeight(height);
+
+    return () => resizeObserver.disconnect();
+  }, []);
+
   // Initialize charts
   useEffect(() => {
     if (
+      containerHeight > 0 && // Ensure container height is calculated
+      containerWidth > 0 && // Ensure container width is calculated
       priceChartRef.current &&
       volumeChartRef.current &&
-      totalVolumeChartRef.current && // Add check for new ref
-      !chartComponents.current
+      totalVolumeChartRef.current &&
+      !chartComponents.current // Only initialize once
     ) {
       try {
         console.log("Creating price, pressure, and total volume charts...");
         const chartTheme = getChartTheme(theme);
+
+        // Calculate initial pixel heights from percentage state
+        const panelHeights = [
+          (panelSizes[0] / 100) * containerHeight,
+          (panelSizes[1] / 100) * containerHeight,
+          (panelSizes[2] / 100) * containerHeight,
+        ];
 
         // Common chart options
         const commonOptions = {
@@ -146,25 +189,25 @@ export default function TradePriceVolumeChart() {
           },
         };
 
-        // Create price chart (60% height)
+        // Create price chart
         const priceChart = createChart(priceChartRef.current, {
           ...commonOptions,
-          width: priceChartRef.current.clientWidth,
-          height: (window.innerHeight - 280) * 0.6,
+          width: containerWidth, // Use containerWidth
+          height: panelHeights[0], // Use calculated initial height
         });
 
-        // Create net pressure volume chart (20% height)
+        // Create net pressure volume chart
         const volumeChart = createChart(volumeChartRef.current, {
           ...commonOptions,
-          width: volumeChartRef.current.clientWidth,
-          height: (window.innerHeight - 280) * 0.2,
+          width: containerWidth, // Use containerWidth
+          height: panelHeights[1], // Use calculated initial height
         });
 
-        // Create total volume chart (20% height)
+        // Create total volume chart
         const totalVolumeChart = createChart(totalVolumeChartRef.current, {
           ...commonOptions,
-          width: totalVolumeChartRef.current.clientWidth,
-          height: (window.innerHeight - 280) * 0.2,
+          width: containerWidth, // Use containerWidth
+          height: panelHeights[2], // Use calculated initial height
         });
 
         // Candlestick series for price chart
@@ -293,45 +336,57 @@ export default function TradePriceVolumeChart() {
         chartComponents.current = {
           priceChart,
           volumeChart,
-          totalVolumeChart, // Add new chart
+          totalVolumeChart,
           candleSeries,
           volumeSeries,
-          totalVolumeSeries, // Add new series
+          totalVolumeSeries,
         };
 
-        // Handle resize
-        const handleResize = () => {
-          if (
-            chartComponents.current &&
-            priceChartRef.current &&
-            volumeChartRef.current &&
-            totalVolumeChartRef.current // Add check for new ref
-          ) {
-            const { priceChart, volumeChart, totalVolumeChart } =
-              chartComponents.current;
-            priceChart.applyOptions({
-              width: priceChartRef.current.clientWidth,
-              height: (window.innerHeight - 280) * 0.6,
-            });
-            volumeChart.applyOptions({
-              width: volumeChartRef.current.clientWidth,
-              height: (window.innerHeight - 280) * 0.2,
-            });
-            totalVolumeChart.applyOptions({
-              // Add resize for new chart
-              width: totalVolumeChartRef.current.clientWidth,
-              height: (window.innerHeight - 280) * 0.2,
-            });
-          }
-        };
-
-        window.addEventListener("resize", handleResize);
-        return () => window.removeEventListener("resize", handleResize);
+        // *** NOTE: Existing window resize listener is removed ***
+        // Resize is handled by react-resizable-panels and the ResizeObserver
       } catch (error) {
         console.error("Error initializing charts:", error);
       }
     }
-  }, [syncingCharts, theme]);
+    // Cleanup function to remove charts on component unmount or re-init
+    return () => {
+      if (chartComponents.current) {
+        chartComponents.current.priceChart.remove();
+        chartComponents.current.volumeChart.remove();
+        chartComponents.current.totalVolumeChart.remove();
+        chartComponents.current = null;
+        console.log("Charts removed");
+      }
+    };
+  }, [theme, containerHeight, containerWidth]); // Depend on container dimensions
+
+  // Effect to handle resizing charts when panel sizes change or container resizes
+  useEffect(() => {
+    if (!chartComponents.current || containerHeight <= 0 || containerWidth <= 0)
+      return;
+
+    const { priceChart, volumeChart, totalVolumeChart } =
+      chartComponents.current;
+
+    // Calculate pixel heights from the panelSizes state and current containerHeight
+    const panelHeights = [
+      Math.max(10, (panelSizes[0] / 100) * containerHeight), // Ensure minimum height
+      Math.max(10, (panelSizes[1] / 100) * containerHeight),
+      Math.max(10, (panelSizes[2] / 100) * containerHeight),
+    ];
+
+    // Apply the calculated dimensions
+    // Use the current containerWidth from state
+    priceChart.applyOptions({ width: containerWidth, height: panelHeights[0] });
+    volumeChart.applyOptions({
+      width: containerWidth,
+      height: panelHeights[1],
+    });
+    totalVolumeChart.applyOptions({
+      width: containerWidth,
+      height: panelHeights[2],
+    });
+  }, [panelSizes, containerHeight, containerWidth]); // React to panel size and container dimension changes
 
   // Apply theme changes dynamically
   useEffect(() => {
@@ -516,6 +571,12 @@ export default function TradePriceVolumeChart() {
   const twLegendTextColor =
     theme === "light" ? "text-gray-700" : "text-slate-200";
 
+  // Callback for react-resizable-panels layout changes
+  const handleLayout = useCallback((sizes: number[]) => {
+    // sizes are percentages [60, 20, 20] etc.
+    setPanelSizes(sizes);
+  }, []);
+
   return (
     <div
       className={`flex min-h-screen w-full flex-col p-2 md:p-5 ${twBgColor} ${twTextColor}`}
@@ -653,149 +714,179 @@ export default function TradePriceVolumeChart() {
         </div>
       </div>
 
-      {/* Charts Section */}
+      {/* Charts Section - Now uses PanelGroup */}
       <div
-        className={`${twCardBgColor} ${twBorderColor} flex flex-col gap-1 rounded-xl border p-2 md:p-4`}
+        ref={containerRef} // Ref for the main container for ResizeObserver
+        className={`${twCardBgColor} ${twBorderColor} flex flex-1 flex-col overflow-hidden rounded-xl border`}
+        // Use flex-1 to allow it to grow and fill available space
       >
-        {/* Price Chart (60%) */}
-        <div className="flex flex-col">
-          <div className="mb-2 flex items-center justify-between md:mb-2.5">
-            <div className="flex items-center space-x-2 md:space-x-3">
-              <div className="flex items-center">
-                <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[#26a69a] md:mr-2 md:h-2.5 md:w-2.5"></span>
-                <span
-                  className={`text-sm font-medium md:text-base ${twLegendTextColor}`}
-                >
-                  Price Up
-                </span>
+        <PanelGroup direction="vertical" onLayout={handleLayout}>
+          {/* Price Chart Panel */}
+          <Panel
+            defaultSize={60} // Initial size
+            minSize={MIN_PANEL_SIZE_PERCENT} // Minimum size percentage
+            order={1}
+            className="flex flex-col overflow-hidden p-2 pb-0 md:p-4" // Add flex flex-col
+          >
+            <div className="mb-2 flex items-center justify-between md:mb-2.5">
+              <div className="flex items-center space-x-2 md:space-x-3">
+                <div className="flex items-center">
+                  <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[#26a69a] md:mr-2 md:h-2.5 md:w-2.5"></span>
+                  <span
+                    className={`text-sm font-medium md:text-base ${twLegendTextColor}`}
+                  >
+                    Price Up
+                  </span>
+                </div>
+                <div className="flex items-center">
+                  <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[#ef5350] md:mr-2 md:h-2.5 md:w-2.5"></span>
+                  <span
+                    className={`text-sm font-medium md:text-base ${twLegendTextColor}`}
+                  >
+                    Price Down
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center">
-                <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[#ef5350] md:mr-2 md:h-2.5 md:w-2.5"></span>
-                <span
-                  className={`text-sm font-medium md:text-base ${twLegendTextColor}`}
-                >
-                  Price Down
-                </span>
-              </div>
+              {latestCandle && (
+                <div className="text-xs font-semibold md:text-sm">
+                  <span
+                    className={
+                      latestCandle.close >= latestCandle.open
+                        ? "text-[#26a69a]"
+                        : "text-[#ef5350]"
+                    }
+                  >
+                    {latestCandle.close.toFixed(2)}
+                  </span>
+                </div>
+              )}
             </div>
-            {latestCandle && (
-              <div className="text-xs font-semibold md:text-sm">
-                <span
-                  className={
-                    latestCandle.close >= latestCandle.open
-                      ? "text-[#26a69a]"
-                      : "text-[#ef5350]"
-                  }
-                >
-                  {latestCandle.close.toFixed(2)}
-                </span>
+            {isLoading ? (
+              <div className="flex flex-1 items-center justify-center">
+                <div
+                  className={`h-10 w-10 animate-spin rounded-full border-4 ${currentChartTheme.spinnerBorder} ${currentChartTheme.spinnerTop}`}
+                ></div>
               </div>
+            ) : (
+              <div ref={priceChartRef}></div>
             )}
-          </div>
-          {isLoading ? (
-            <div className="flex h-[280px] w-full items-center justify-center md:h-[calc((100vh-280px)*0.6)]">
-              <div
-                className={`h-10 w-10 animate-spin rounded-full border-4 ${currentChartTheme.spinnerBorder} ${currentChartTheme.spinnerTop}`}
-              ></div>
-            </div>
-          ) : (
-            <div
-              ref={priceChartRef}
-              className="h-[280px] w-full overflow-hidden rounded-md md:h-[calc((100vh-280px)*0.6)]"
-            />
-          )}
-        </div>
+          </Panel>
 
-        {/* Volume Chart (Net Pressure - 20%) */}
-        <div
-          className={`mt-1 flex flex-col border-t pt-3 ${theme === "light" ? "border-gray-200" : "border-gray-800"}`}
-        >
-          <div className="mb-2 flex items-center justify-between md:mb-2.5">
-            <div className="flex items-center space-x-2 md:space-x-3">
-              <div className="flex items-center">
-                <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[#26a69a] opacity-60 md:mr-2 md:h-2.5 md:w-2.5"></span>
-                <span
-                  className={`text-sm font-medium md:text-base ${twLegendTextColor}`}
-                >
-                  Buy Pressure
-                </span>
-              </div>
-              <div className="flex items-center">
-                <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[#ef5350] opacity-60 md:mr-2 md:h-2.5 md:w-2.5"></span>
-                <span
-                  className={`text-sm font-medium md:text-base ${twLegendTextColor}`}
-                >
-                  Sell Pressure
-                </span>
-              </div>
-            </div>
-            {latestCandle && (
-              <div className="text-xs font-semibold md:text-sm">
-                <span
-                  className={
-                    latestCandle.buyVolume > latestCandle.sellVolume
-                      ? "text-[#26a69a]"
-                      : "text-[#ef5350]"
-                  }
-                >
-                  {formatVolume(
-                    Math.abs(latestCandle.buyVolume - latestCandle.sellVolume),
-                  )}
-                </span>
-              </div>
-            )}
-          </div>
-          {isLoading ? (
-            <div className="flex h-[80px] w-full items-center justify-center md:h-[calc((100vh-280px)*0.2)]">
-              <div
-                className={`h-8 w-8 animate-spin rounded-full border-4 ${currentChartTheme.spinnerBorder} ${currentChartTheme.spinnerTop}`}
-              ></div>
-            </div>
-          ) : (
+          {/* --- Draggable Handle 1 --- */}
+          <PanelResizeHandle
+            className={`flex items-center justify-center ${theme === "light" ? "bg-gray-200 hover:bg-blue-400" : "bg-[#161b24] hover:bg-blue-500"} transition-colors duration-150 data-[resize-handle-state=drag]:bg-blue-500`}
+            style={{ height: `8px` /* HANDLE_HEIGHT_PX */ }}
+          >
+            {/* Optional: Add visual indicator for handle */}
             <div
-              ref={volumeChartRef}
-              className="h-[80px] w-full overflow-hidden rounded-md md:h-[calc((100vh-280px)*0.2)]"
-            />
-          )}
-        </div>
+              className={`h-1 w-8 rounded-full ${theme === "light" ? "bg-gray-400" : "bg-gray-500"}`}
+            ></div>
+          </PanelResizeHandle>
 
-        {/* Total Volume Chart (20%) */}
-        <div
-          className={`mt-1 flex flex-col border-t pt-3 ${theme === "light" ? "border-gray-200" : "border-gray-800"}`}
-        >
-          <div className="mb-2 flex items-center justify-between md:mb-2.5">
-            <div className="flex items-center">
-              <span
-                style={{ backgroundColor: currentChartTheme.totalVolume }}
-                className={`mr-1.5 inline-block h-2 w-2 rounded-full opacity-70 md:mr-2 md:h-2.5 md:w-2.5`}
-              ></span>
-              <span
-                className={`text-sm font-medium md:text-base ${twLegendTextColor}`}
-              >
-                Total Volume
-              </span>
-            </div>
-            {latestCandle && (
-              <div
-                className={`text-xs font-semibold md:text-sm ${twSubTextColor}`}
-              >
-                {formatVolume(latestCandle.totalVolume)}
+          {/* Volume Chart Panel (Net Pressure) */}
+          <Panel
+            defaultSize={20} // Initial size
+            minSize={MIN_PANEL_SIZE_PERCENT}
+            order={2}
+            className="flex flex-col overflow-hidden p-2 pb-0 pt-0 md:p-4" // Add flex flex-col
+          >
+            <div className="mb-2 mt-2 flex items-center justify-between md:mb-2.5 md:mt-2.5">
+              <div className="flex items-center space-x-2 md:space-x-3">
+                <div className="flex items-center">
+                  <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[#26a69a] opacity-60 md:mr-2 md:h-2.5 md:w-2.5"></span>
+                  <span
+                    className={`text-sm font-medium md:text-base ${twLegendTextColor}`}
+                  >
+                    Buy Pressure
+                  </span>
+                </div>
+                <div className="flex items-center">
+                  <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[#ef5350] opacity-60 md:mr-2 md:h-2.5 md:w-2.5"></span>
+                  <span
+                    className={`text-sm font-medium md:text-base ${twLegendTextColor}`}
+                  >
+                    Sell Pressure
+                  </span>
+                </div>
               </div>
-            )}
-          </div>
-          {isLoading ? (
-            <div className="flex h-[80px] w-full items-center justify-center md:h-[calc((100vh-280px)*0.2)]">
-              <div
-                className={`h-8 w-8 animate-spin rounded-full border-4 ${currentChartTheme.spinnerBorder} ${currentChartTheme.spinnerTop}`}
-              ></div>
+              {latestCandle && (
+                <div className="text-xs font-semibold md:text-sm">
+                  <span
+                    className={
+                      latestCandle.buyVolume > latestCandle.sellVolume
+                        ? "text-[#26a69a]"
+                        : "text-[#ef5350]"
+                    }
+                  >
+                    {formatVolume(
+                      Math.abs(
+                        latestCandle.buyVolume - latestCandle.sellVolume,
+                      ),
+                    )}
+                  </span>
+                </div>
+              )}
             </div>
-          ) : (
+            {isLoading ? (
+              <div className="flex flex-1 items-center justify-center">
+                <div
+                  className={`h-8 w-8 animate-spin rounded-full border-4 ${currentChartTheme.spinnerBorder} ${currentChartTheme.spinnerTop}`}
+                ></div>
+              </div>
+            ) : (
+              <div ref={volumeChartRef}></div>
+            )}
+          </Panel>
+
+          {/* --- Draggable Handle 2 --- */}
+          <PanelResizeHandle
+            className={`flex items-center justify-center ${theme === "light" ? "bg-gray-200 hover:bg-blue-400" : "bg-[#161b24] hover:bg-blue-500"} transition-colors duration-150 data-[resize-handle-state=drag]:bg-blue-500`}
+            style={{ height: `8px` /* HANDLE_HEIGHT_PX */ }}
+          >
+            {/* Optional: Add visual indicator for handle */}
             <div
-              ref={totalVolumeChartRef}
-              className="h-[80px] w-full overflow-hidden rounded-md md:h-[calc((100vh-280px)*0.2)]"
-            />
-          )}
-        </div>
+              className={`h-1 w-8 rounded-full ${theme === "light" ? "bg-gray-400" : "bg-gray-500"}`}
+            ></div>
+          </PanelResizeHandle>
+
+          {/* Total Volume Chart Panel */}
+          <Panel
+            defaultSize={20} // Initial size
+            minSize={MIN_PANEL_SIZE_PERCENT}
+            order={3}
+            className="flex flex-col overflow-hidden p-2 pt-0 md:p-4" // Add flex flex-col
+          >
+            <div className="mb-2 mt-2 flex items-center justify-between md:mb-2.5 md:mt-2.5">
+              <div className="flex items-center">
+                <span
+                  style={{ backgroundColor: currentChartTheme.totalVolume }}
+                  className={`mr-1.5 inline-block h-2 w-2 rounded-full opacity-70 md:mr-2 md:h-2.5 md:w-2.5`}
+                ></span>
+                <span
+                  className={`text-sm font-medium md:text-base ${twLegendTextColor}`}
+                >
+                  Total Volume
+                </span>
+              </div>
+              {latestCandle && (
+                <div
+                  className={`text-xs font-semibold md:text-sm ${twSubTextColor}`}
+                >
+                  {formatVolume(latestCandle.totalVolume)}
+                </div>
+              )}
+            </div>
+            {isLoading ? (
+              <div className="flex flex-1 items-center justify-center">
+                <div
+                  className={`h-8 w-8 animate-spin rounded-full border-4 ${currentChartTheme.spinnerBorder} ${currentChartTheme.spinnerTop}`}
+                ></div>
+              </div>
+            ) : (
+              <div ref={totalVolumeChartRef}></div>
+            )}
+          </Panel>
+        </PanelGroup>
       </div>
 
       {/* Footer Stats */}
