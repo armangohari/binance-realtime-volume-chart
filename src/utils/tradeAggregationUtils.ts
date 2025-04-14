@@ -52,17 +52,24 @@ export async function getAggregatedTradeCandles(
   pair: string,
   timeframe: string,
 ): Promise<CandleData[]> {
-  // Calculate timestamp for the start of the fetch window
-  const startTime = new Date(
-    Date.now() - RECENT_TRADES_FETCH_WINDOW_MINUTES * 60 * 1000,
+  // Calculate the rough start time for the fetch window
+  const now = Date.now();
+  const windowStartTimeRough =
+    now - RECENT_TRADES_FETCH_WINDOW_MINUTES * 60 * 1000;
+
+  // Align the start time to the beginning of the candle interval
+  // This ensures we fetch all trades for the oldest visible candle
+  const fetchStartTimeAligned = await alignTimestampToCandle(
+    windowStartTimeRough,
+    timeframe,
   );
 
-  // Get raw trades from the defined time window for the pair ordered by timestamp
+  // Get raw trades from the aligned start time for the pair ordered by timestamp
   const rawTrades = await prisma.rawTrade.findMany({
     where: {
       pair: pair.toLowerCase(),
       timestamp: {
-        gte: startTime, // Filter for trades within the defined window
+        gte: new Date(fetchStartTimeAligned), // Use aligned start time
       },
     },
     orderBy: {
