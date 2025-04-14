@@ -45,13 +45,6 @@ export default function TradePriceVolumeChart() {
   const [selectedTimeframe, setSelectedTimeframe] = useState<string>("1m");
   const [syncingCharts, setSyncingCharts] = useState<boolean>(false);
 
-  // Constants for styling
-  const bgColor = "bg-[#060a10]";
-  const cardBgColor = "bg-[#0f1217]";
-  const borderColor = "border-[#252830]";
-  const controlBgColor = "bg-[#161b24]";
-  const controlBorderColor = "border-[#252a36]";
-
   // Fetch historical data using React Query
   const { data, isLoading, isError, error } = useHistoricalTradeData(
     symbol,
