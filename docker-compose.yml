@@ -3,6 +3,11 @@ services:
     image: postgres:15-alpine
     container_name: binance-chart-db
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 1G
     ports:
       - "5433:5432"
     environment:
@@ -30,6 +35,11 @@ services:
       dockerfile: Dockerfile.worker
     container_name: binance-chart-worker
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-binance}?schema=public
@@ -38,11 +48,11 @@ services:
       DB_BATCH_SIZE: ${DB_BATCH_SIZE:-100}
       DB_FLUSH_INTERVAL: ${DB_FLUSH_INTERVAL:-5000}
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "3333"]
-      interval: 10s
+      test: ["CMD-SHELL", "ps | grep '[n]ode' || exit 1"]
+      interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 30s
+      start_period: 60s
     depends_on:
       db:
         condition: service_healthy
@@ -55,6 +65,11 @@ services:
       dockerfile: Dockerfile
     container_name: binance-chart-app
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 1.5G
     ports:
       - "${APP_PORT:-3000}:3000"
     environment:

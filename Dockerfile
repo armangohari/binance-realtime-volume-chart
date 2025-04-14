@@ -23,7 +23,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules/ ./node_modules/
 COPY . .
 
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NEXT_TELEMETRY_DISABLED=1
 
 # Generate Prisma client
 RUN npx prisma generate
@@ -38,8 +38,8 @@ WORKDIR /app
 # Install wget for healthcheck and postgresql-client for database checks
 RUN apk add --no-cache wget postgresql-client
 
-ENV NODE_ENV production
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
@@ -66,8 +66,8 @@ USER nextjs
 
 EXPOSE 3000
 
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
 # Run the entrypoint script
 CMD ["/entrypoint.sh"]

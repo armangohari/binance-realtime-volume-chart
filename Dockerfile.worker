@@ -24,7 +24,7 @@ RUN npx prisma generate
 RUN npx tsc worker/index.ts --esModuleInterop --skipLibCheck
 
 # Set environment variables
-ENV NODE_ENV production
+ENV NODE_ENV=production
 
 # Create entrypoint script
 COPY scripts/worker-entrypoint.sh /worker-entrypoint.sh
