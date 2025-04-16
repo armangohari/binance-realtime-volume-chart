@@ -31,15 +31,13 @@ else
 fi
 
 # Check if the compiled index.js exists in dist
-if [ ! -f ./dist/worker/index.js ]; then
-  echo "Error: dist/worker/index.js not found!"
+if [ ! -f ./dist/index.js ]; then
+  echo "Error: dist/index.js not found!"
   echo "Listing dist directory:"
-  ls -la dist/
-  echo "Listing dist/worker directory:"
-  ls -la dist/worker/
+  ls -la dist/ || echo "dist directory does not exist"
   exit 1
 fi
 
 # Start the worker using the compiled file
 echo "Starting worker process..."
-exec node dist/worker/index.js 
+exec node dist/index.js 
