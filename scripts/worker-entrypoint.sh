@@ -11,16 +11,23 @@ echo "DATABASE_URL exists: $(if [ -n "$DATABASE_URL" ]; then echo "yes"; else ec
 echo "BINANCE_WS_URL=$BINANCE_WS_URL"
 echo "SYMBOLS=$SYMBOLS"
 
-# Run migrations if DATABASE_URL is set
+# Generate Prisma client if DATABASE_URL is set, but don't run migrations
 if [ -n "$DATABASE_URL" ]; then
   echo "Generating Prisma client..."
   npx prisma generate
   echo "Prisma client generated!"
-  echo "Running Prisma migrations..."
-  npx prisma migrate deploy
-  echo "Migrations completed!"
+  
+  # Wait for database to be ready and migrations to be applied (by app container)
+  echo "Waiting for database and migrations to be ready..."
+  npx prisma db pull --force > /dev/null 2>&1
+  while [ $? -ne 0 ]; do
+    echo "Database not ready yet, waiting..."
+    sleep 5
+    npx prisma db pull --force > /dev/null 2>&1
+  done
+  echo "Database is ready with schema applied!"
 else
-  echo "Warning: DATABASE_URL is not set, skipping migrations and client generation"
+  echo "Warning: DATABASE_URL is not set, skipping client generation"
 fi
 
 # Check if the compiled index.js exists in dist

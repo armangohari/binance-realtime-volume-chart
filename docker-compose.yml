@@ -29,36 +29,6 @@ services:
     networks:
       - app-network
 
-  worker:
-    build:
-      context: .
-      dockerfile: Dockerfile.worker
-    container_name: binance-chart-worker
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: "0.50"
-          memory: 512M
-    environment:
-      NODE_ENV: production
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-binance}?schema=public
-      BINANCE_WS_URL: ${BINANCE_WS_URL:-wss://stream.binance.com:9443/ws}
-      SYMBOLS: ${SYMBOLS:-btcusdt,ethusdt,solusdt,xrpusdt,dogeusdt,adausdt}
-      DB_BATCH_SIZE: ${DB_BATCH_SIZE:-100}
-      DB_FLUSH_INTERVAL: ${DB_FLUSH_INTERVAL:-5000}
-    healthcheck:
-      test: ["CMD-SHELL", "ps | grep '[n]ode' || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-    depends_on:
-      db:
-        condition: service_healthy
-    networks:
-      - app-network
-
   app:
     build:
       context: .
@@ -92,8 +62,36 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      worker:
-        condition: service_started
+    networks:
+      - app-network
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: binance-chart-worker
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-binance}?schema=public
+      BINANCE_WS_URL: ${BINANCE_WS_URL:-wss://stream.binance.com:9443/ws}
+      SYMBOLS: ${SYMBOLS:-btcusdt,ethusdt,solusdt,xrpusdt,dogeusdt,adausdt}
+      DB_BATCH_SIZE: ${DB_BATCH_SIZE:-100}
+      DB_FLUSH_INTERVAL: ${DB_FLUSH_INTERVAL:-5000}
+    healthcheck:
+      test: ["CMD-SHELL", "ps | grep '[n]ode' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    depends_on:
+      app:
+        condition: service_healthy
     networks:
       - app-network
 
