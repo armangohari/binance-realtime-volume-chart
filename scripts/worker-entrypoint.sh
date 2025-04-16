@@ -13,11 +13,14 @@ echo "SYMBOLS=$SYMBOLS"
 
 # Run migrations if DATABASE_URL is set
 if [ -n "$DATABASE_URL" ]; then
+  echo "Generating Prisma client..."
+  npx prisma generate
+  echo "Prisma client generated!"
   echo "Running Prisma migrations..."
   npx prisma migrate deploy
   echo "Migrations completed!"
 else
-  echo "Warning: DATABASE_URL is not set, skipping migrations"
+  echo "Warning: DATABASE_URL is not set, skipping migrations and client generation"
 fi
 
 # Check if the compiled index.js exists in dist

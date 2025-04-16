@@ -1,36 +1,48 @@
-FROM node:20-alpine
+# ---- Builder Stage ----
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
+# Copy package files and prisma schema
 COPY package.json package-lock.json ./
 COPY prisma ./prisma/
 COPY tsconfig.json ./
 COPY tsconfig.worker.json ./
 
-# Install dependencies with enhanced retry logic for npm
-RUN npm config set registry https://registry.npmjs.org/ && \
-    npm config set fetch-retry-mintimeout 100000 && \
-    npm config set fetch-retry-maxtimeout 300000 && \
-    npm config set fetch-retries 8 && \
-    for i in {1..5}; do npm ci && break || sleep 15; done
+# Install ALL dependencies (including devDependencies)
+RUN npm install --verbose
 
-# Copy application code
+# Verify tsc installation
+RUN ls -la ./node_modules/.bin/ && \
+    if [ ! -f ./node_modules/.bin/tsc ]; then echo "tsc not found after install!"; exit 1; fi
+
+# Copy the rest of the application code
 COPY . ./
 
-# Generate Prisma client
-RUN npx prisma generate
-
 # Compile TypeScript to JavaScript using the worker-specific config
-RUN npx tsc -p tsconfig.worker.json
+RUN ./node_modules/.bin/tsc -p tsconfig.worker.json
 
-# Set environment variables
+# ---- Final Stage ----
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Set environment variable for production
 ENV NODE_ENV=production
 
-# Create entrypoint script
+# Copy package files and prisma schema needed for production
+COPY package.json package-lock.json ./
+COPY prisma ./prisma/
+
+# Install ONLY production dependencies
+RUN npm install --omit=dev --verbose
+
+# Copy compiled code from builder stage
+COPY --from=builder /app/dist ./dist
+
+# Copy entrypoint script
 COPY scripts/worker-entrypoint.sh /worker-entrypoint.sh
 RUN chmod +x /worker-entrypoint.sh
 
-# Run the entrypoint script
-# The entrypoint script needs to execute the compiled JS: node dist/worker/index.js
+# Run the entrypoint script (which handles migrations, prisma generate, and starts the worker)
 CMD ["/worker-entrypoint.sh"]
