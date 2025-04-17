@@ -1,22 +1,24 @@
 FROM node:20-alpine AS base
 
-# Builder stage: Installs all deps, builds the app
+# Add Alpine repository mirror for better reliability
+RUN echo 'https://dl-cdn.alpinelinux.org/alpine/v3.19/main/' > /etc/apk/repositories && \
+    echo 'https://dl-cdn.alpinelinux.org/alpine/v3.19/community/' >> /etc/apk/repositories && \
+    apk update
+
+# Builder stage: Use pre-built node_modules and builds the app
 FROM base AS builder
 WORKDIR /app
 
-# Copy package files and prisma schema first for better caching
-COPY package.json package-lock.json ./
-COPY prisma ./prisma/
+# Copy package files and install dependencies
+COPY package*.json ./
+RUN npm ci
 
-# Install dependencies
-RUN npm install --verbose
-
-# Copy the rest of the application code
+# Copy all application code
 COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Generate Prisma client
+# Generate Prisma client (no need to re-install dependencies)
 RUN npx prisma generate
 
 # Build Next.js
@@ -27,7 +29,7 @@ FROM base AS runner
 WORKDIR /app
 
 # Install utilities needed in the final image
-RUN apk add --no-cache wget postgresql-client
+RUN apk add --no-cache postgresql
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -36,15 +38,13 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy package files for production dependencies
-COPY package.json package-lock.json ./
-
 # Copy necessary artifacts from builder stage
 COPY --from=builder /app/public ./public/
 COPY --from=builder /app/prisma ./prisma/
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static/
 COPY --from=builder /app/node_modules ./node_modules
+COPY package.json ./
 
 # Copy entrypoint script
 COPY scripts/entrypoint.sh /entrypoint.sh

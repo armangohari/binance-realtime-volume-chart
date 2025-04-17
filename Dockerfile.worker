@@ -1,22 +1,18 @@
 # ---- Builder Stage ----
 FROM node:20-alpine AS builder
 
+# Add Alpine repository mirror for better reliability
+RUN echo 'https://dl-cdn.alpinelinux.org/alpine/v3.19/main/' > /etc/apk/repositories && \
+    echo 'https://dl-cdn.alpinelinux.org/alpine/v3.19/community/' >> /etc/apk/repositories && \
+    apk update
+
 WORKDIR /app
 
-# Copy package files and prisma schema
-COPY package.json package-lock.json ./
-COPY prisma ./prisma/
-COPY tsconfig.json ./
-COPY tsconfig.worker.json ./
+# Copy package files and install dependencies
+COPY package*.json ./
+RUN npm ci
 
-# Install ALL dependencies (including devDependencies)
-RUN npm install --verbose
-
-# Verify tsc installation
-RUN ls -la ./node_modules/.bin/ && \
-    if [ ! -f ./node_modules/.bin/tsc ]; then echo "tsc not found after install!"; exit 1; fi
-
-# Copy the rest of the application code
+# Copy all application code
 COPY . ./
 
 # Compile TypeScript to JavaScript using the worker-specific config
@@ -25,17 +21,20 @@ RUN ./node_modules/.bin/tsc -p tsconfig.worker.json
 # ---- Final Stage ----
 FROM node:20-alpine
 
+# Add Alpine repository mirror for better reliability
+RUN echo 'https://dl-cdn.alpinelinux.org/alpine/v3.19/main/' > /etc/apk/repositories && \
+    echo 'https://dl-cdn.alpinelinux.org/alpine/v3.19/community/' >> /etc/apk/repositories && \
+    apk update
+
 WORKDIR /app
 
 # Set environment variable for production
 ENV NODE_ENV=production
 
-# Copy package files and prisma schema needed for production
-COPY package.json package-lock.json ./
-COPY prisma ./prisma/
-
-# Install ONLY production dependencies
-RUN npm install --omit=dev --verbose
+# Copy package files and node_modules
+COPY package.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/prisma ./prisma/
 
 # Copy compiled code from builder stage
 COPY --from=builder /app/dist ./dist
