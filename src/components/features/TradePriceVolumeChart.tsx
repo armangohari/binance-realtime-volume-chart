@@ -20,7 +20,7 @@ import {
   createChart,
 } from "lightweight-charts";
 import { useTheme } from "next-themes";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FaArrowTrendDown, FaArrowTrendUp } from "react-icons/fa6";
 import { IoStatsChart } from "react-icons/io5";
 import { MdSwapVert } from "react-icons/md";
@@ -36,7 +36,6 @@ interface ChartComponents {
 }
 
 export default function TradePriceVolumeChart() {
-  const containerRef = useRef<HTMLDivElement>(null); // Ref for the main charts container
   const priceChartRef = useRef<HTMLDivElement>(null);
   const volumeChartRef = useRef<HTMLDivElement>(null); // Net Pressure
   const totalVolumeChartRef = useRef<HTMLDivElement>(null); // Total Volume
@@ -45,9 +44,6 @@ export default function TradePriceVolumeChart() {
   const [symbol, setSymbol] = useState<string>("btcusdt");
   const [selectedTimeframe, setSelectedTimeframe] = useState<string>("1m");
   const [syncingCharts, setSyncingCharts] = useState<boolean>(false);
-  // State for container height (to calculate chart pixel heights)
-  const [containerHeight, setContainerHeight] = useState<number>(0);
-  const [containerWidth, setContainerWidth] = useState<number>(0);
 
   // Fetch historical data using React Query
   const { data, isLoading, isError, error } = useHistoricalTradeData(
@@ -92,178 +88,83 @@ export default function TradePriceVolumeChart() {
     };
   };
 
-  // Update container dimensions using ResizeObserver
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    const resizeObserver = new ResizeObserver((entries) => {
-      if (entries[0]) {
-        const { width, height } = entries[0].contentRect;
-        setContainerWidth(width);
-        setContainerHeight(height); // Store the raw height
-      }
-    });
-
-    resizeObserver.observe(containerRef.current);
-
-    // Initial measurement
-    const { width, height } = containerRef.current.getBoundingClientRect();
-    setContainerWidth(width);
-    setContainerHeight(height);
-
-    return () => resizeObserver.disconnect();
-  }, []);
-
   // Initialize charts
   useEffect(() => {
     if (
-      containerHeight > 0 && // Ensure container height is calculated
-      containerWidth > 0 && // Ensure container width is calculated
       priceChartRef.current &&
       volumeChartRef.current &&
-      totalVolumeChartRef.current &&
-      !chartComponents.current // Only initialize once
+      totalVolumeChartRef.current && // Add check for new ref
+      !chartComponents.current
     ) {
       try {
         console.log("Creating price, pressure, and total volume charts...");
         const chartTheme = getChartTheme(theme);
 
-        // Create price chart
+        // Common chart options
+        const commonOptions = {
+          layout: {
+            background: { type: ColorType.Solid, color: chartTheme.background },
+            textColor: chartTheme.text,
+            fontFamily:
+              "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+          },
+          grid: {
+            vertLines: { color: chartTheme.grid },
+            horzLines: { color: chartTheme.grid },
+          },
+          timeScale: {
+            timeVisible: true,
+            secondsVisible: false,
+            borderColor: chartTheme.border,
+            barSpacing: 8,
+          },
+          crosshair: {
+            vertLine: {
+              color: chartTheme.crosshair,
+              width: 1 as 1,
+              style: 1,
+              labelBackgroundColor: chartTheme.crosshairLabelBg,
+            },
+            horzLine: {
+              color: chartTheme.crosshair,
+              width: 1 as 1,
+              style: 1,
+              labelBackgroundColor: chartTheme.crosshairLabelBg,
+            },
+            mode: 1,
+          },
+          rightPriceScale: {
+            visible: true,
+            borderColor: chartTheme.border,
+            scaleMargins: {
+              top: 0.1,
+              bottom: 0.1,
+            },
+          },
+          leftPriceScale: {
+            visible: false,
+          },
+        };
+
+        // Create price chart (60% height)
         const priceChart = createChart(priceChartRef.current, {
-          layout: {
-            background: { type: ColorType.Solid, color: chartTheme.background },
-            textColor: chartTheme.text,
-            fontFamily:
-              "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-          },
-          grid: {
-            vertLines: { color: chartTheme.grid },
-            horzLines: { color: chartTheme.grid },
-          },
-          timeScale: {
-            timeVisible: true,
-            secondsVisible: false,
-            borderColor: chartTheme.border,
-            barSpacing: 8,
-          },
-          crosshair: {
-            vertLine: {
-              color: chartTheme.crosshair,
-              width: 1 as 1,
-              style: 1,
-              labelBackgroundColor: chartTheme.crosshairLabelBg,
-            },
-            horzLine: {
-              color: chartTheme.crosshair,
-              width: 1 as 1,
-              style: 1,
-              labelBackgroundColor: chartTheme.crosshairLabelBg,
-            },
-            mode: 1,
-          },
-          rightPriceScale: {
-            visible: true,
-            borderColor: chartTheme.border,
-            scaleMargins: {
-              top: 0.1,
-              bottom: 0.1,
-            },
-          },
-          leftPriceScale: {
-            visible: false,
-          },
+          ...commonOptions,
+          width: priceChartRef.current.clientWidth,
+          height: (window.innerHeight - 280) * 0.6,
         });
 
-        // Create net pressure volume chart
+        // Create net pressure volume chart (20% height)
         const volumeChart = createChart(volumeChartRef.current, {
-          layout: {
-            background: { type: ColorType.Solid, color: chartTheme.background },
-            textColor: chartTheme.text,
-            fontFamily:
-              "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-          },
-          grid: {
-            vertLines: { color: chartTheme.grid },
-            horzLines: { color: chartTheme.grid },
-          },
-          timeScale: {
-            timeVisible: true,
-            secondsVisible: false,
-            borderColor: chartTheme.border,
-            barSpacing: 8,
-          },
-          crosshair: {
-            vertLine: {
-              color: chartTheme.crosshair,
-              width: 1 as 1,
-              style: 1,
-              labelBackgroundColor: chartTheme.crosshairLabelBg,
-            },
-            horzLine: {
-              color: chartTheme.crosshair,
-              width: 1 as 1,
-              style: 1,
-              labelBackgroundColor: chartTheme.crosshairLabelBg,
-            },
-            mode: 1,
-          },
-          rightPriceScale: {
-            visible: true,
-            borderColor: chartTheme.border,
-            scaleMargins: {
-              top: 0.1,
-              bottom: 0.1,
-            },
-          },
-          leftPriceScale: {
-            visible: false,
-          },
+          ...commonOptions,
+          width: volumeChartRef.current.clientWidth,
+          height: (window.innerHeight - 280) * 0.2,
         });
 
-        // Create total volume chart
+        // Create total volume chart (20% height)
         const totalVolumeChart = createChart(totalVolumeChartRef.current, {
-          layout: {
-            background: { type: ColorType.Solid, color: chartTheme.background },
-            textColor: chartTheme.text,
-            fontFamily:
-              "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-          },
-          grid: {
-            vertLines: { color: chartTheme.grid },
-            horzLines: { color: chartTheme.grid },
-          },
-          timeScale: {
-            timeVisible: true,
-            secondsVisible: false,
-            borderColor: chartTheme.border,
-            barSpacing: 8,
-          },
-          crosshair: {
-            vertLine: {
-              color: chartTheme.crosshair,
-              width: 1 as 1,
-              style: 1,
-              labelBackgroundColor: chartTheme.crosshairLabelBg,
-            },
-            horzLine: {
-              color: chartTheme.crosshair,
-              width: 1 as 1,
-              style: 1,
-              labelBackgroundColor: chartTheme.crosshairLabelBg,
-            },
-            mode: 1,
-          },
-          rightPriceScale: {
-            visible: true,
-            borderColor: chartTheme.border,
-            scaleMargins: {
-              top: 0.1,
-              bottom: 0.1,
-            },
-          },
-          leftPriceScale: {
-            visible: false,
-          },
+          ...commonOptions,
+          width: totalVolumeChartRef.current.clientWidth,
+          height: (window.innerHeight - 280) * 0.2,
         });
 
         // Candlestick series for price chart
@@ -392,69 +293,45 @@ export default function TradePriceVolumeChart() {
         chartComponents.current = {
           priceChart,
           volumeChart,
-          totalVolumeChart,
+          totalVolumeChart, // Add new chart
           candleSeries,
           volumeSeries,
-          totalVolumeSeries,
+          totalVolumeSeries, // Add new series
         };
 
-        // *** NOTE: Existing window resize listener is removed ***
-        // Resize is handled by react-resizable-panels and the ResizeObserver
+        // Handle resize
+        const handleResize = () => {
+          if (
+            chartComponents.current &&
+            priceChartRef.current &&
+            volumeChartRef.current &&
+            totalVolumeChartRef.current // Add check for new ref
+          ) {
+            const { priceChart, volumeChart, totalVolumeChart } =
+              chartComponents.current;
+            priceChart.applyOptions({
+              width: priceChartRef.current.clientWidth,
+              height: (window.innerHeight - 280) * 0.6,
+            });
+            volumeChart.applyOptions({
+              width: volumeChartRef.current.clientWidth,
+              height: (window.innerHeight - 280) * 0.2,
+            });
+            totalVolumeChart.applyOptions({
+              // Add resize for new chart
+              width: totalVolumeChartRef.current.clientWidth,
+              height: (window.innerHeight - 280) * 0.2,
+            });
+          }
+        };
+
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
       } catch (error) {
         console.error("Error initializing charts:", error);
       }
     }
-    // Cleanup function to remove charts on component unmount or re-init
-    return () => {
-      if (chartComponents.current) {
-        chartComponents.current.priceChart.remove();
-        chartComponents.current.volumeChart.remove();
-        chartComponents.current.totalVolumeChart.remove();
-        chartComponents.current = null;
-        console.log("Charts removed");
-      }
-    };
-  }, [theme, containerHeight, containerWidth]); // Depend on container dimensions
-
-  // Effect to handle resizing charts when container resizes
-  useEffect(() => {
-    if (!chartComponents.current || containerHeight <= 0 || containerWidth <= 0)
-      return;
-
-    const { priceChart, volumeChart, totalVolumeChart } =
-      chartComponents.current;
-
-    // Fixed heights based on 60/20/20 percentages
-    const priceChartHeight = Math.max(200, containerHeight * 0.6);
-    const volumeChartHeight = Math.max(100, containerHeight * 0.2);
-    const totalVolumeChartHeight = Math.max(100, containerHeight * 0.2);
-
-    // Apply the calculated dimensions
-    priceChart.applyOptions({
-      width: containerWidth,
-      height: priceChartHeight,
-    });
-    volumeChart.applyOptions({
-      width: containerWidth,
-      height: volumeChartHeight,
-    });
-    totalVolumeChart.applyOptions({
-      width: containerWidth,
-      height: totalVolumeChartHeight,
-    });
-
-    // Log resize info for debugging
-    console.log(
-      `Resizing charts - Heights: ${priceChartHeight}, ${volumeChartHeight}, ${totalVolumeChartHeight}`,
-    );
-
-    // Force redraw of charts to ensure they fit correctly
-    setTimeout(() => {
-      priceChart.timeScale().fitContent();
-      volumeChart.timeScale().fitContent();
-      totalVolumeChart.timeScale().fitContent();
-    }, 50);
-  }, [containerHeight, containerWidth]); // Only depend on container dimensions
+  }, [syncingCharts, theme]);
 
   // Apply theme changes dynamically
   useEffect(() => {
@@ -776,147 +653,148 @@ export default function TradePriceVolumeChart() {
         </div>
       </div>
 
-      {/* Charts Section - Replace PanelGroup with fixed layout */}
+      {/* Charts Section */}
       <div
-        ref={containerRef} // Ref for the main container for ResizeObserver
-        className={`${twCardBgColor} ${twBorderColor} flex flex-1 flex-col overflow-hidden rounded-xl border`}
+        className={`${twCardBgColor} ${twBorderColor} flex flex-col gap-1 rounded-xl border p-2 md:p-4`}
       >
-        {/* Price Chart Section - Fixed 60% */}
-        <div className="flex h-[60%] min-h-[200px] flex-col overflow-hidden">
-          <div className="flex flex-1 flex-col overflow-hidden p-2 md:p-4">
-            <div className="mb-2 flex items-center justify-between md:mb-2.5">
-              <div className="flex items-center space-x-2 md:space-x-3">
-                <div className="flex items-center">
-                  <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[#26a69a] md:mr-2 md:h-2.5 md:w-2.5"></span>
-                  <span
-                    className={`text-sm font-medium md:text-base ${twLegendTextColor}`}
-                  >
-                    Price Up
-                  </span>
-                </div>
-                <div className="flex items-center">
-                  <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[#ef5350] md:mr-2 md:h-2.5 md:w-2.5"></span>
-                  <span
-                    className={`text-sm font-medium md:text-base ${twLegendTextColor}`}
-                  >
-                    Price Down
-                  </span>
-                </div>
-              </div>
-              {latestCandle && (
-                <div className="text-xs font-semibold md:text-sm">
-                  <span
-                    className={
-                      latestCandle.close >= latestCandle.open
-                        ? "text-[#26a69a]"
-                        : "text-[#ef5350]"
-                    }
-                  >
-                    {latestCandle.close.toFixed(2)}
-                  </span>
-                </div>
-              )}
-            </div>
-            {/* Loading or Chart content */}
-            {isLoading ? (
-              <div className="flex flex-1 items-center justify-center">
-                <div
-                  className={`h-10 w-10 animate-spin rounded-full border-4 ${currentChartTheme.spinnerBorder} ${currentChartTheme.spinnerTop}`}
-                ></div>
-              </div>
-            ) : (
-              <div ref={priceChartRef} className="h-full w-full"></div>
-            )}
-          </div>
-        </div>
-
-        {/* Volume Chart Section (Net Pressure) - Fixed 20% */}
-        <div className="flex h-[20%] min-h-[100px] flex-col overflow-hidden">
-          <div className="flex flex-1 flex-col overflow-hidden p-2 pt-0 md:p-4 md:pt-0">
-            <div className="mb-2 mt-2 flex items-center justify-between md:mb-2.5 md:mt-2.5">
-              <div className="flex items-center space-x-2 md:space-x-3">
-                <div className="flex items-center">
-                  <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[#26a69a] opacity-60 md:mr-2 md:h-2.5 md:w-2.5"></span>
-                  <span
-                    className={`text-sm font-medium md:text-base ${twLegendTextColor}`}
-                  >
-                    Buy Pressure
-                  </span>
-                </div>
-                <div className="flex items-center">
-                  <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[#ef5350] opacity-60 md:mr-2 md:h-2.5 md:w-2.5"></span>
-                  <span
-                    className={`text-sm font-medium md:text-base ${twLegendTextColor}`}
-                  >
-                    Sell Pressure
-                  </span>
-                </div>
-              </div>
-              {latestCandle && (
-                <div className="text-xs font-semibold md:text-sm">
-                  <span
-                    className={
-                      latestCandle.buyVolume > latestCandle.sellVolume
-                        ? "text-[#26a69a]"
-                        : "text-[#ef5350]"
-                    }
-                  >
-                    {formatVolume(
-                      Math.abs(
-                        latestCandle.buyVolume - latestCandle.sellVolume,
-                      ),
-                    )}
-                  </span>
-                </div>
-              )}
-            </div>
-            {/* Loading or Chart content */}
-            {isLoading ? (
-              <div className="flex flex-1 items-center justify-center">
-                <div
-                  className={`h-8 w-8 animate-spin rounded-full border-4 ${currentChartTheme.spinnerBorder} ${currentChartTheme.spinnerTop}`}
-                ></div>
-              </div>
-            ) : (
-              <div ref={volumeChartRef} className="h-full w-full"></div>
-            )}
-          </div>
-        </div>
-
-        {/* Total Volume Chart Section - Fixed 20% */}
-        <div className="flex h-[20%] min-h-[100px] flex-col overflow-hidden">
-          <div className="flex flex-1 flex-col overflow-hidden p-2 pt-0 md:p-4 md:pt-0">
-            <div className="mb-2 mt-2 flex items-center justify-between md:mb-2.5 md:mt-2.5">
+        {/* Price Chart (60%) */}
+        <div className="flex flex-col">
+          <div className="mb-2 flex items-center justify-between md:mb-2.5">
+            <div className="flex items-center space-x-2 md:space-x-3">
               <div className="flex items-center">
-                <span
-                  style={{ backgroundColor: currentChartTheme.totalVolume }}
-                  className={`mr-1.5 inline-block h-2 w-2 rounded-full opacity-70 md:mr-2 md:h-2.5 md:w-2.5`}
-                ></span>
+                <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[#26a69a] md:mr-2 md:h-2.5 md:w-2.5"></span>
                 <span
                   className={`text-sm font-medium md:text-base ${twLegendTextColor}`}
                 >
-                  Total Volume
+                  Price Up
                 </span>
               </div>
-              {latestCandle && (
-                <div
-                  className={`text-xs font-semibold md:text-sm ${twSubTextColor}`}
+              <div className="flex items-center">
+                <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[#ef5350] md:mr-2 md:h-2.5 md:w-2.5"></span>
+                <span
+                  className={`text-sm font-medium md:text-base ${twLegendTextColor}`}
                 >
-                  {formatVolume(latestCandle.totalVolume)}
-                </div>
-              )}
-            </div>
-            {/* Loading or Chart content */}
-            {isLoading ? (
-              <div className="flex flex-1 items-center justify-center">
-                <div
-                  className={`h-8 w-8 animate-spin rounded-full border-4 ${currentChartTheme.spinnerBorder} ${currentChartTheme.spinnerTop}`}
-                ></div>
+                  Price Down
+                </span>
               </div>
-            ) : (
-              <div ref={totalVolumeChartRef} className="h-full w-full"></div>
+            </div>
+            {latestCandle && (
+              <div className="text-xs font-semibold md:text-sm">
+                <span
+                  className={
+                    latestCandle.close >= latestCandle.open
+                      ? "text-[#26a69a]"
+                      : "text-[#ef5350]"
+                  }
+                >
+                  {latestCandle.close.toFixed(2)}
+                </span>
+              </div>
             )}
           </div>
+          {isLoading ? (
+            <div className="flex h-[280px] w-full items-center justify-center md:h-[calc((100vh-280px)*0.6)]">
+              <div
+                className={`h-10 w-10 animate-spin rounded-full border-4 ${currentChartTheme.spinnerBorder} ${currentChartTheme.spinnerTop}`}
+              ></div>
+            </div>
+          ) : (
+            <div
+              ref={priceChartRef}
+              className="h-[280px] w-full overflow-hidden rounded-md md:h-[calc((100vh-280px)*0.6)]"
+            />
+          )}
+        </div>
+
+        {/* Volume Chart (Net Pressure - 20%) */}
+        <div
+          className={`mt-1 flex flex-col border-t pt-3 ${theme === "light" ? "border-gray-200" : "border-gray-800"}`}
+        >
+          <div className="mb-2 flex items-center justify-between md:mb-2.5">
+            <div className="flex items-center space-x-2 md:space-x-3">
+              <div className="flex items-center">
+                <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[#26a69a] opacity-60 md:mr-2 md:h-2.5 md:w-2.5"></span>
+                <span
+                  className={`text-sm font-medium md:text-base ${twLegendTextColor}`}
+                >
+                  Buy Pressure
+                </span>
+              </div>
+              <div className="flex items-center">
+                <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[#ef5350] opacity-60 md:mr-2 md:h-2.5 md:w-2.5"></span>
+                <span
+                  className={`text-sm font-medium md:text-base ${twLegendTextColor}`}
+                >
+                  Sell Pressure
+                </span>
+              </div>
+            </div>
+            {latestCandle && (
+              <div className="text-xs font-semibold md:text-sm">
+                <span
+                  className={
+                    latestCandle.buyVolume > latestCandle.sellVolume
+                      ? "text-[#26a69a]"
+                      : "text-[#ef5350]"
+                  }
+                >
+                  {formatVolume(
+                    Math.abs(latestCandle.buyVolume - latestCandle.sellVolume),
+                  )}
+                </span>
+              </div>
+            )}
+          </div>
+          {isLoading ? (
+            <div className="flex h-[80px] w-full items-center justify-center md:h-[calc((100vh-280px)*0.2)]">
+              <div
+                className={`h-8 w-8 animate-spin rounded-full border-4 ${currentChartTheme.spinnerBorder} ${currentChartTheme.spinnerTop}`}
+              ></div>
+            </div>
+          ) : (
+            <div
+              ref={volumeChartRef}
+              className="h-[80px] w-full overflow-hidden rounded-md md:h-[calc((100vh-280px)*0.2)]"
+            />
+          )}
+        </div>
+
+        {/* Total Volume Chart (20%) */}
+        <div
+          className={`mt-1 flex flex-col border-t pt-3 ${theme === "light" ? "border-gray-200" : "border-gray-800"}`}
+        >
+          <div className="mb-2 flex items-center justify-between md:mb-2.5">
+            <div className="flex items-center">
+              <span
+                style={{ backgroundColor: currentChartTheme.totalVolume }}
+                className={`mr-1.5 inline-block h-2 w-2 rounded-full opacity-70 md:mr-2 md:h-2.5 md:w-2.5`}
+              ></span>
+              <span
+                className={`text-sm font-medium md:text-base ${twLegendTextColor}`}
+              >
+                Total Volume
+              </span>
+            </div>
+            {latestCandle && (
+              <div
+                className={`text-xs font-semibold md:text-sm ${twSubTextColor}`}
+              >
+                {formatVolume(latestCandle.totalVolume)}
+              </div>
+            )}
+          </div>
+          {isLoading ? (
+            <div className="flex h-[80px] w-full items-center justify-center md:h-[calc((100vh-280px)*0.2)]">
+              <div
+                className={`h-8 w-8 animate-spin rounded-full border-4 ${currentChartTheme.spinnerBorder} ${currentChartTheme.spinnerTop}`}
+              ></div>
+            </div>
+          ) : (
+            <div
+              ref={totalVolumeChartRef}
+              className="h-[80px] w-full overflow-hidden rounded-md md:h-[calc((100vh-280px)*0.2)]"
+            />
+          )}
         </div>
       </div>
 
