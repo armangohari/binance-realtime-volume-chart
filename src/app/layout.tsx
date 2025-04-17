@@ -1,7 +1,6 @@
 import { ThemeProvider } from "@/components/ui/theme-provider";
 import { ReactQueryProvider } from "@/contexts/ReactQueryProvider";
 import "@/styles/globals.css";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -26,11 +25,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <ReactQueryProvider>
-            {children}
-
-            {process.env.NODE_ENV === "development" && <ReactQueryDevtools />}
-          </ReactQueryProvider>
+          <ReactQueryProvider>{children}</ReactQueryProvider>
         </ThemeProvider>
       </body>
     </html>
