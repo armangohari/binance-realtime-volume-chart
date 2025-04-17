@@ -29,7 +29,7 @@ FROM base AS runner
 WORKDIR /app
 
 # Install utilities needed in the final image
-RUN apk add --no-cache postgresql
+RUN apk add --no-cache postgresql wget
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
