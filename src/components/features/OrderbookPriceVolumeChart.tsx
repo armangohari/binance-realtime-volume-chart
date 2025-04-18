@@ -66,7 +66,7 @@ interface BinanceKlineUpdate {
   };
 }
 
-export default function BinanceOrderbookVolumeChart() {
+export default function OrderbookPriceVolumeChart() {
   const priceChartRef = useRef<HTMLDivElement>(null);
   const pressureChartRef = useRef<HTMLDivElement>(null);
   const totalVolumeChartRef = useRef<HTMLDivElement>(null);
